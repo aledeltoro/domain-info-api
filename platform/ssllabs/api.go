@@ -24,13 +24,7 @@ func SslGet(domain string) *Response {
 
 	var responseObject Response
 	json.Unmarshal(responseData, &responseObject)
-
-	// fmt.Println(responseObject.Status)
-
-	// for i := 0; i < len(responseObject.EndPoints); i++ {
-	// 	fmt.Println(responseObject.EndPoints[i].IPAddress, responseObject.EndPoints[i].Grade)
-	// }
-
+	
 	return &responseObject
 
 }
