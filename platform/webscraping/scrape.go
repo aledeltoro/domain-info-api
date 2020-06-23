@@ -28,7 +28,9 @@ func FetchWebsiteInfo(domain string) WebsiteInfo {
 
 func scrapeDocument(domain string) *goquery.Document {
 
-	response, err := http.Get(domain)
+	protocol := "https://"
+
+	response, err := http.Get(protocol + domain)
 	if err != nil {
 		log.Fatal(err)
 	}

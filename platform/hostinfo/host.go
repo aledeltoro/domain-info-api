@@ -33,6 +33,7 @@ func CreateHost(domain string) *Host {
 	status := sslAPI.SslGet(domain).Status
 
 	host = Host{
+		Servers: servers,
 		ServersChanged: false,
 		Grade:          GetLowestGrade(servers),
 		PreviousGrade:  "",
