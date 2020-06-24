@@ -13,6 +13,7 @@ type Connection struct {
 var (
 	hostTableQuery = `CREATE TABLE IF NOT EXISTS host (
 		id SERIAL PRIMARY KEY, 
+		domain_name TEXT,
 		server_changed BOOLEAN,
 		ssl_grade VARCHAR(2),
 		previous_ssl_grade VARCHAR(2),
