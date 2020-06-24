@@ -30,18 +30,32 @@ func main() {
 
 	router := fasthttprouter.New()
 
+	router.POST("/domains", func(ctx *fasthttp.RequestCtx) {
+
+		hostArg := ctx.URI().QueryArgs().Peek("host")
+
+		domain := hostinfo.NewDomain(string(hostArg))
+		host.InsertDomain(domain)
+
+		ctx.Response.SetStatusCode(http.StatusCreated)
+		ctx.Response.Header.SetContentType("application/json")
+
+		json.NewEncoder(ctx).Encode(domain.HostInfo)
+
+	})
+	
 	router.GET("/domains", func(ctx *fasthttp.RequestCtx) {
-
+		
 		domains := host.GetAllDomains()
-
+		
 		ctx.Response.Header.SetContentType("application/json")
 		ctx.Response.SetStatusCode(http.StatusOK)
-
+		
 		err := json.NewEncoder(ctx).Encode(domains)
 		if err != nil {
 			log.Fatal(err)
 		}
-
+		
 	})
 
 	fmt.Println("Listening on port 3000")
