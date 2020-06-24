@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+// Items represents an array of domains
+type Items struct {
+	Domains []Domain `json:"items"`
+}
+
 // Domain represents the host info of a given domain
 type Domain struct {
 	Name      string    `json:"domainName"`
@@ -66,9 +71,9 @@ func (c *Connection) InsertDomain(domain *Domain) {
 }
 
 // GetAllDomains returns a slice of domains from the database
-func (c *Connection) GetAllDomains() []Domain {
+func (c *Connection) GetAllDomains() Items {
 
-	var domains []Domain
+	var items Items
 
 	rows, err := c.DB.Query("SELECT * FROM host")
 	if err != nil {
@@ -103,11 +108,11 @@ func (c *Connection) GetAllDomains() []Domain {
 			CreatedAt: createdAt,
 		}
 
-		domains = append(domains, domain)
+		items.Domains = append(items.Domains, domain)
 
 	}
 
-	return domains
+	return items
 
 }
 
