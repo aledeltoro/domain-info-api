@@ -3,9 +3,9 @@ package whoisrecord
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"net/http"
+
+	"github.com/valyala/fasthttp"
 )
 
 var (
@@ -14,20 +14,15 @@ var (
 )
 
 // WhoIsGet returns the registrant information of the specified IP
-func WhoIsGet(IP string) *Response  {
+func WhoIsGet(IP string) *Response {
 
-	response, err := http.Get(whoIsAPI + IP)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	responseData, err := ioutil.ReadAll(response.Body)
+	_, body, err := fasthttp.Get(nil, whoIsAPI+IP)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var responseObject Response
-	json.Unmarshal(responseData, &responseObject)
+	json.Unmarshal(body, &responseObject)
 
 	return &responseObject
 
