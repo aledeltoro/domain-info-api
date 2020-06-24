@@ -15,8 +15,11 @@ func DomainPOST(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 
 		hostArg := ctx.URI().QueryArgs().Peek("host")
 
-		domain := hostinfo.NewDomain(string(hostArg))
-		host.InsertDomain(domain)
+		domain, exists := host.CheckDomainExists(string(hostArg))
+		if !exists {
+			domain := hostinfo.NewDomain(string(hostArg))
+			host.InsertDomain(domain)
+		}
 
 		ctx.Response.SetStatusCode(http.StatusCreated)
 		ctx.Response.Header.SetContentType("application/json")
