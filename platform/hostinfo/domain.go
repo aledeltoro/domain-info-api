@@ -78,7 +78,8 @@ func (c *Connection) GetAllDomains() []Domain {
 
 	for rowsHosts.Next() {
 
-		if err := rowsHosts.Scan(&id, &name, &serverChanged, &grade, &previousGrade, &logo, &title, &isDown, &createdAt); err != nil {
+		err := rowsHosts.Scan(&id, &name, &serverChanged, &grade, &previousGrade, &logo, &title, &isDown, &createdAt)
+		if err != nil {
 			log.Fatal(err)
 		}
 
@@ -129,7 +130,8 @@ func (c *Connection) getAllServers(hostID int) []Server {
 
 	for rows.Next() {
 
-		if err := rows.Scan(&address, &grade, &country, &owner); err != nil {
+		err := rows.Scan(&address, &grade, &country, &owner)
+		if err != nil {
 			log.Fatal(err)
 		}
 
