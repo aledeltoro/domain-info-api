@@ -17,7 +17,7 @@ type WebsiteInfo struct {
 func FetchWebsiteInfo(domain string) WebsiteInfo {
 
 	var siteInfo WebsiteInfo
-	
+
 	document := scrapeDocument(domain)
 	siteInfo.fetchTitle(document)
 	siteInfo.fetchLogo(document)
@@ -46,7 +46,6 @@ func scrapeDocument(domain string) *goquery.Document {
 
 }
 
-
 func (w *WebsiteInfo) fetchTitle(document *goquery.Document) {
 
 	title := document.Find("title").Text()
@@ -56,19 +55,23 @@ func (w *WebsiteInfo) fetchTitle(document *goquery.Document) {
 
 func (w *WebsiteInfo) fetchLogo(document *goquery.Document) {
 
-	document.Find("link").Each(func(index int, element *goquery.Selection) {
+	document.Find("link").EachWithBreak(func(index int, element *goquery.Selection) bool {
 
 		rel, exists := element.Attr("rel")
-		if exists {
 
-			if rel == "shortcut icon" {
-				logo, exists := element.Attr("href")
-				if exists {
-					w.Logo = logo
-				}
+		var isIconReal bool = rel == "shortcut icon" || rel == "icon"
+
+		if exists && isIconReal {
+
+			logo, exists := element.Attr("href")
+			if exists {
+				w.Logo = logo
+				return false
 			}
 
 		}
+
+		return true
 
 	})
 
