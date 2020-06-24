@@ -3,7 +3,6 @@ package hostinfo
 import (
 	sslAPI "domain-info-api/platform/ssllabs"
 	scraping "domain-info-api/platform/webscraping"
-	"time"
 )
 
 // Host represents info for a given Host
@@ -15,7 +14,6 @@ type Host struct {
 	Logo           string   `json:"logo"`
 	Title          string   `json:"title"`
 	IsDown         bool     `json:"is_down"`
-	CreatedAt      time.Time
 }
 
 var statusMessages = map[string]bool{
@@ -40,7 +38,6 @@ func NewHost(URL string) *Host {
 		Logo:           siteInfo.Logo,
 		Title:          siteInfo.Title,
 		IsDown:         statusMessages[status],
-		CreatedAt:      time.Now(),
 	}
 
 	return &host

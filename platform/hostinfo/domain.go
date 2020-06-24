@@ -2,14 +2,16 @@ package hostinfo
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"time"
 )
 
 // Domain represents the host info of a given domain
 type Domain struct {
-	Name     string `json:"domainName"`
-	HostInfo Host   `json:"hostInfo"`
+	Name      string    `json:"domainName"`
+	HostInfo  Host      `json:"hostInfo"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // NewDomain returns a new Domain based on the given url
@@ -20,6 +22,7 @@ func NewDomain(URL string) *Domain {
 	domainObject = Domain{
 		Name:     URL,
 		HostInfo: *NewHost(URL),
+		CreatedAt: time.Now(),
 	}
 
 	return &domainObject
@@ -36,7 +39,7 @@ func (c *Connection) InsertDomain(domain *Domain) {
 
 	host := domain.HostInfo
 
-	record := insertDomainStmt.QueryRow(domain.Name, host.ServersChanged, host.Grade, host.PreviousGrade, host.Logo, host.Title, host.IsDown, host.CreatedAt)
+	record := insertDomainStmt.QueryRow(domain.Name, host.ServersChanged, host.Grade, host.PreviousGrade, host.Logo, host.Title, host.IsDown, domain.CreatedAt)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -96,8 +99,8 @@ func (c *Connection) GetAllDomains() []Domain {
 				Logo:           logo,
 				Title:          title,
 				IsDown:         isDown,
-				CreatedAt:      createdAt,
 			},
+			CreatedAt: createdAt,
 		}
 
 		domains = append(domains, domain)
@@ -176,52 +179,54 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 	}
 
 	var domainObject Domain
+	var oldServers []Server
+
+	stmt, err = c.DB.Prepare(`
+	SELECT 
+	server.address, server.ssl_grade, server.country, server.owner
+	FROM
+	server
+	WHERE
+	server.host_id=$1
+	`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	rows, err := stmt.Query(id)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var address, serverGrade, country, owner string
+
+	for rows.Next() {
+
+		if err := rows.Scan(&address, &serverGrade, &country, &owner); err != nil {
+			log.Fatal(err)
+		}
+
+		server := Server{
+			Address:  address,
+			SslGrade: serverGrade,
+			Country:  country,
+			Owner:    owner,
+		}
+
+		oldServers = append(oldServers, server)
+
+	}
+
+	domainServers := oldServers
 
 	if diff := checkTimeDiffNow(createdAt); diff >= 1 {
+
+		fmt.Println("Hello")
 
 		newServers := AddServers(domainName)
 		newGrade := GetLowestGrade(newServers)
 
-		stmt, err = c.DB.Prepare(`
-		SELECT 
-			server.address, server.ssl_grade, server.country, server.owner
-		FROM
-			server
-		WHERE
-			server.host_id=$1
-		`)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		rows, err := stmt.Query(id)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		var address, serverGrade, country, owner string
-		var oldServers []Server
-
-		for rows.Next() {
-
-			if err := rows.Scan(&address, &serverGrade, &country, &owner); err != nil {
-				log.Fatal(err)
-			}
-
-			server := Server{
-				Address:  address,
-				SslGrade: serverGrade,
-				Country:  country,
-				Owner:    owner,
-			}
-
-			oldServers = append(oldServers, server)
-
-		}
-
 		serverChanged := haveServersChanged(newServers, oldServers)
-
-		domainServers := oldServers
 
 		if serverChanged {
 
@@ -257,36 +262,50 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 		UPDATE host
 		SET server_changed = $1,
 				ssl_grade = $2,
-				previous_ssl_grade = $3
+				previous_ssl_grade = $3,
+				created_at = $4
 		WHERE
-			host.id = $4
-		RETURNING 
-			host.domain_name, host.server_changed, host.ssl_grade, host.previous_ssl_grade, host.logo, host.title, host.is_down
+			host.id = $5
 		`)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		row := stmt.QueryRow(serverChanged, newGrade, currentGrade, id)
-
-		var domainName, domainGrade, previousGrade, logo, title string
-		var domainServerChanged, isDown bool
-
-		row.Scan(&domainName, &domainServerChanged, &domainGrade, &previousGrade, &logo, &title, &isDown)
-
-		domainObject = Domain{
-			Name: domainName, 
-			HostInfo: Host{
-				Servers: domainServers,
-				ServersChanged: domainServerChanged,
-				Grade: domainGrade,
-				PreviousGrade: previousGrade,
-				Logo: logo, 
-				Title: title,
-				IsDown: isDown,
-			},
+		_, err = stmt.Exec(serverChanged, newGrade, currentGrade, time.Now(), id)
+		if err != nil {
+			log.Fatal(err)
 		}
 
+	}
+
+	stmt, err = c.DB.Prepare(`
+		SELECT 
+			host.domain_name, host.server_changed, host.ssl_grade, host.previous_ssl_grade, host.logo, host.title, host.is_down
+		FROM
+			host
+	`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var domainGrade, previousGrade, logo, title string
+	var domainServerChanged, isDown bool
+
+	row := stmt.QueryRow()
+	
+	row.Scan(&domainName, &domainServerChanged, &domainGrade, &previousGrade, &logo, &title, &isDown)
+
+	domainObject = Domain{
+		Name: domainName,
+		HostInfo: Host{
+			Servers:        domainServers,
+			ServersChanged: domainServerChanged,
+			Grade:          domainGrade,
+			PreviousGrade:  previousGrade,
+			Logo:           logo,
+			Title:          title,
+			IsDown:         isDown,
+		},
 	}
 
 	return &domainObject, true
