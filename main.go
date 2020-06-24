@@ -2,11 +2,11 @@ package main
 
 import (
 	"database/sql"
-	hostinfo "domain-info-api/platform/hostinfo"
 	"fmt"
 	"log"
 
 	handler "domain-info-api/handler"
+	hostinfo "domain-info-api/platform/hostinfo"
 
 	"github.com/buaazp/fasthttprouter"
 	_ "github.com/lib/pq"

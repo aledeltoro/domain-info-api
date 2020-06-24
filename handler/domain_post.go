@@ -16,8 +16,9 @@ func DomainPOST(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 		hostArg := ctx.URI().QueryArgs().Peek("host")
 
 		domain, exists := host.CheckDomainExists(string(hostArg))
+
 		if !exists {
-			domain := hostinfo.NewDomain(string(hostArg))
+			domain = hostinfo.NewDomain(string(hostArg))
 			host.InsertDomain(domain)
 		}
 

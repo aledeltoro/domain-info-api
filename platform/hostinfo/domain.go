@@ -20,8 +20,8 @@ func NewDomain(URL string) *Domain {
 	var domainObject Domain
 
 	domainObject = Domain{
-		Name:     URL,
-		HostInfo: *NewHost(URL),
+		Name:      URL,
+		HostInfo:  *NewHost(URL),
 		CreatedAt: time.Now(),
 	}
 
@@ -183,11 +183,11 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 
 	stmt, err = c.DB.Prepare(`
 	SELECT 
-	server.address, server.ssl_grade, server.country, server.owner
+		server.address, server.ssl_grade, server.country, server.owner
 	FROM
-	server
+		server
 	WHERE
-	server.host_id=$1
+		server.host_id=$1
 	`)
 	if err != nil {
 		log.Fatal(err)
@@ -283,6 +283,8 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 			host.domain_name, host.server_changed, host.ssl_grade, host.previous_ssl_grade, host.logo, host.title, host.is_down
 		FROM
 			host
+		WHERE
+			host.domain_name=$1
 	`)
 	if err != nil {
 		log.Fatal(err)
@@ -291,8 +293,8 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 	var domainGrade, previousGrade, logo, title string
 	var domainServerChanged, isDown bool
 
-	row := stmt.QueryRow()
-	
+	row := stmt.QueryRow(domainName)
+
 	row.Scan(&domainName, &domainServerChanged, &domainGrade, &previousGrade, &logo, &title, &isDown)
 
 	domainObject = Domain{

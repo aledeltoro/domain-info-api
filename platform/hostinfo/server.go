@@ -13,14 +13,14 @@ type Server struct {
 	Owner    string `json:"owner"`
 }
 
-var	grades = map[string]int {
+var grades = map[string]int{
 	"A+": 7,
-	"A": 6,
-	"B": 5,
-	"C": 4,
-	"D": 3,
-	"E": 2,
-	"F": 1,
+	"A":  6,
+	"B":  5,
+	"C":  4,
+	"D":  3,
+	"E":  2,
+	"F":  1,
 }
 
 // AddServers returns a slice with all of the servers of a given domain
@@ -33,15 +33,15 @@ func AddServers(domain string) []Server {
 	var IPAddress string
 
 	for i := 0; i < len(hostSSLData.EndPoints); i++ {
-		
+
 		IPAddress = hostSSLData.EndPoints[i].IPAddress
 		serverRegistry := whoisAPI.WhoIsGet(IPAddress)
 
 		var server = Server{
-			Address: IPAddress,
+			Address:  IPAddress,
 			SslGrade: hostSSLData.EndPoints[i].Grade,
-			Country: serverRegistry.WhoIsRecord.Registry.RegistrantInfo.CountryCode,
-			Owner: serverRegistry.WhoIsRecord.Registry.RegistrantInfo.Organization,
+			Country:  serverRegistry.WhoIsRecord.Registry.RegistrantInfo.CountryCode,
+			Owner:    serverRegistry.WhoIsRecord.Registry.RegistrantInfo.Organization,
 		}
 
 		servers = append(servers, server)
@@ -60,7 +60,7 @@ func GetLowestGrade(servers []Server) string {
 	lowestGrade = "A+"
 
 	for i := 0; i < len(servers); i++ {
-		
+
 		currentLetter = servers[i].SslGrade
 
 		if grades[lowestGrade] > grades[currentLetter] {
