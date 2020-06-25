@@ -145,6 +145,135 @@ func (c *Connection) GetAllDomains() (*Items, error) {
 
 }
 
+
+// CheckDomainExists returns the given domain from the database if it already exists
+func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, error) {
+
+	stmt, err := c.DB.Prepare(`
+	SELECT
+		host.id, host.ssl_grade, host.created_at  
+	FROM 
+		host 
+	WHERE 
+		host.domain_name=$1
+	`)
+	if err != nil {
+		log.Println("Invalid query statement: ", err.Error())
+		return &Domain{}, false, err
+	}
+
+	var hostID int
+	var currentGrade string
+	var createdAt time.Time
+
+	err = stmt.QueryRow(domainName).Scan(&hostID, &currentGrade, &createdAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return &Domain{}, false, nil
+		}
+		log.Println("Query operation failed: ", err.Error())
+		return &Domain{}, false, err
+	}
+
+	oldServers, err := c.getAllServers(hostID)
+	if err != nil {
+		return &Domain{}, false, err
+	}
+
+	if diff := checkTimeDiffNow(createdAt); diff >= 1 {
+
+		newServers, err := AddServers(domainName)
+		if err != nil {
+			return &Domain{}, false, err
+		}
+
+		newGrade := GetLowestGrade(newServers)
+
+		serverChanged := haveServersChanged(newServers, oldServers)
+
+		if serverChanged {
+
+			err = c.updateAllServers(newServers, hostID)
+			if err != nil {
+				return &Domain{}, false, err
+			}
+
+		}
+
+		stmt, err := c.DB.Prepare(`
+		UPDATE host
+		SET server_changed = $1,
+				ssl_grade = $2,
+				previous_ssl_grade = $3,
+				created_at = $4
+		WHERE
+			host.id = $5
+		`)
+		if err != nil {
+			log.Println("Invalid query statement: ", err.Error())
+			return &Domain{}, false, err
+		}
+
+		_, err = stmt.Exec(serverChanged, newGrade, currentGrade, time.Now(), hostID)
+		if err != nil {
+			log.Println("Query operation failed: ", err.Error())
+			return &Domain{}, false, err
+		}
+
+	}
+
+	domainObject, err := c.GetDomain(domainName)
+	if err != nil {
+		return &Domain{}, false, nil
+	}
+
+	return domainObject, true, nil
+
+}
+
+// GetDomain returns a single domain specified by the domain name
+func (c *Connection) GetDomain(domainName string) (*Domain, error) {	
+
+	stmt, err := c.DB.Prepare("SELECT * FROM host WHERE host.domain_name=$1")
+	if err != nil {
+		log.Println("Invalid query statement: ", err.Error())
+		return &Domain{}, err
+	}
+
+	row := stmt.QueryRow(domainName)
+
+	var id int
+	var domainGrade, previousGrade, logo, title string
+	var domainServerChanged, isDown bool
+
+	err = row.Scan(&id, &domainName, &domainServerChanged, &domainGrade, &previousGrade, &logo, &title, &isDown)
+	if err != nil {
+		log.Println("Row scan failed: ", err.Error())
+	}
+
+	servers, err := c.getAllServers(id)
+	if err != nil {
+		return &Domain{}, err
+	}
+
+	domainObject := Domain{
+		Name: domainName,
+		HostInfo: Host{
+			Servers:        servers,
+			ServersChanged: domainServerChanged,
+			Grade:          domainGrade,
+			PreviousGrade:  previousGrade,
+			Logo:           logo,
+			Title:          title,
+			IsDown:         isDown,
+		},
+	}
+
+	return &domainObject, nil
+
+}
+
+// Returns from the database a slice of servers for a given host id
 func (c *Connection) getAllServers(hostID int) ([]Server, error) {
 
 	var servers []Server
@@ -195,188 +324,38 @@ func (c *Connection) getAllServers(hostID int) ([]Server, error) {
 
 }
 
-// CheckDomainExists returns the given domain from the database if it already exists
-func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, error) {
+
+func (c *Connection) updateAllServers(newServers []Server, hostID int) error {
 
 	stmt, err := c.DB.Prepare(`
-	SELECT
-		host.id, host.ssl_grade, host.created_at  
-	FROM 
-		host 
-	WHERE 
-		host.domain_name=$1
-	`)
-	if err != nil {
-		log.Println("Invalid query statement: ", err.Error())
-		return &Domain{}, false, err
-	}
-
-	var id, currentGrade string
-	var createdAt time.Time
-
-	err = stmt.QueryRow(domainName).Scan(&id, &currentGrade, &createdAt)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return &Domain{}, false, nil
-		}
-		log.Println("Query operation failed: ", err.Error())
-		return &Domain{}, false, err
-	}
-
-	var domainObject Domain
-	var oldServers []Server
-
-	stmt, err = c.DB.Prepare(`
-	SELECT 
-		server.address, server.ssl_grade, server.country, server.owner
-	FROM
-		server
+	UPDATE server
+	SET	address = $1,
+			ssl_grade = $2,
+			country = $3,
+			owner = $4
 	WHERE
-		server.host_id=$1
+		server.host_id = $5
 	`)
 	if err != nil {
 		log.Println("Invalid query statement: ", err.Error())
-		return &Domain{}, false, err
+		return err
 	}
 
-	rows, err := stmt.Query(id)
-	if err != nil {
-		log.Println("Query operation failed: ", err.Error())
-		return &Domain{}, false, err
-	}
+	for i := 0; i < len(newServers); i++ {
 
-	var address, serverGrade, country, owner string
+		server := newServers[i]
 
-	for rows.Next() {
-
-		err := rows.Scan(&address, &serverGrade, &country, &owner)
-		if err != nil {
-			log.Println("Row scan failed: ", err.Error())
-			return &Domain{}, false, err
-		}
-
-		server := Server{
-			Address:  address,
-			SslGrade: serverGrade,
-			Country:  country,
-			Owner:    owner,
-		}
-
-		oldServers = append(oldServers, server)
-
-	}
-
-	domainServers := oldServers
-
-	if diff := checkTimeDiffNow(createdAt); diff >= 1 {
-
-		newServers, err := AddServers(domainName)
-		if err != nil {
-			return &Domain{}, false, err
-		}
-
-		newGrade := GetLowestGrade(newServers)
-
-		serverChanged := haveServersChanged(newServers, oldServers)
-
-		if serverChanged {
-
-			domainServers = newServers
-
-			stmt, err = c.DB.Prepare(`
-			UPDATE server
-			SET	address = $1,
-					ssl_grade = $2,
-					country = $3,
-					owner = $4
-			WHERE
-				server.host_id = $5
-			`)
-			if err != nil {
-				log.Println("Invalid query statement: ", err.Error())
-				return &Domain{}, false, err
-			}
-
-			for i := 0; i < len(newServers); i++ {
-
-				server := newServers[i]
-
-				_, err := stmt.Exec(server.Address, server.SslGrade, server.Country, server.Owner, id)
-				if err != nil {
-					log.Println("Query operation failed: ", err.Error())
-					return &Domain{}, false, err
-				}
-
-			}
-
-		}
-
-		stmt, err := c.DB.Prepare(`
-		UPDATE host
-		SET server_changed = $1,
-				ssl_grade = $2,
-				previous_ssl_grade = $3,
-				created_at = $4
-		WHERE
-			host.id = $5
-		`)
-		if err != nil {
-			log.Println("Invalid query statement: ", err.Error())
-			return &Domain{}, false, err
-		}
-
-		_, err = stmt.Exec(serverChanged, newGrade, currentGrade, time.Now(), id)
+		_, err := stmt.Exec(server.Address, server.SslGrade, server.Country, server.Owner, hostID)
 		if err != nil {
 			log.Println("Query operation failed: ", err.Error())
-			return &Domain{}, false, err
+			return err
 		}
 
 	}
 
-	stmt, err = c.DB.Prepare(`
-		SELECT 
-			host.domain_name, host.server_changed, host.ssl_grade, host.previous_ssl_grade, host.logo, host.title, host.is_down
-		FROM
-			host
-		WHERE
-			host.domain_name=$1
-	`)
-	if err != nil {
-		log.Println("Invalid query statement: ", err.Error())
-		return &Domain{}, false, err
-	}
-
-	var domainGrade, previousGrade, logo, title string
-	var domainServerChanged, isDown bool
-
-	row := stmt.QueryRow(domainName)
-
-	err = row.Scan(&domainName, &domainServerChanged, &domainGrade, &previousGrade, &logo, &title, &isDown)
-	if err != nil {
-		log.Println("Row scan failed: ", err.Error())
-	}
-
-	domainObject = Domain{
-		Name: domainName,
-		HostInfo: Host{
-			Servers:        domainServers,
-			ServersChanged: domainServerChanged,
-			Grade:          domainGrade,
-			PreviousGrade:  previousGrade,
-			Logo:           logo,
-			Title:          title,
-			IsDown:         isDown,
-		},
-	}
-
-	return &domainObject, true, nil
+	return nil
 
 }
-
-// // GetDomain returns a single domain specified by the domain name
-// func (c *Connection) GetDomain(domainName string) *Domain {
-
-// }
 
 func checkTimeDiffNow(createdAt time.Time) float64 {
 
