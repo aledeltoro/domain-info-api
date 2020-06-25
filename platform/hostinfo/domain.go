@@ -145,7 +145,6 @@ func (c *Connection) GetAllDomains() (*Items, error) {
 
 }
 
-
 // CheckDomainExists returns the given domain from the database if it already exists
 func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, error) {
 
@@ -224,7 +223,7 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, error)
 
 	domainObject, err := c.GetDomain(domainName)
 	if err != nil {
-		return &Domain{}, false, nil
+		return &Domain{}, false, err
 	}
 
 	return domainObject, true, nil
@@ -232,7 +231,7 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, error)
 }
 
 // GetDomain returns a single domain specified by the domain name
-func (c *Connection) GetDomain(domainName string) (*Domain, error) {	
+func (c *Connection) GetDomain(domainName string) (*Domain, error) {
 
 	stmt, err := c.DB.Prepare("SELECT * FROM host WHERE host.domain_name=$1")
 	if err != nil {
@@ -245,10 +244,12 @@ func (c *Connection) GetDomain(domainName string) (*Domain, error) {
 	var id int
 	var domainGrade, previousGrade, logo, title string
 	var domainServerChanged, isDown bool
+	var createdAt time.Time
 
-	err = row.Scan(&id, &domainName, &domainServerChanged, &domainGrade, &previousGrade, &logo, &title, &isDown)
+	err = row.Scan(&id, &domainName, &domainServerChanged, &domainGrade, &previousGrade, &logo, &title, &isDown, &createdAt)
 	if err != nil {
 		log.Println("Row scan failed: ", err.Error())
+		return &Domain{}, err
 	}
 
 	servers, err := c.getAllServers(id)
@@ -267,6 +268,7 @@ func (c *Connection) GetDomain(domainName string) (*Domain, error) {
 			Title:          title,
 			IsDown:         isDown,
 		},
+		CreatedAt: createdAt,
 	}
 
 	return &domainObject, nil
@@ -323,7 +325,6 @@ func (c *Connection) getAllServers(hostID int) ([]Server, error) {
 	return servers, nil
 
 }
-
 
 func (c *Connection) updateAllServers(newServers []Server, hostID int) error {
 

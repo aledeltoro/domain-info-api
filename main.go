@@ -1,10 +1,10 @@
 package main
 
 import (
-	"os"
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 
 	handler "domain-info-api/handler"
 	hostinfo "domain-info-api/platform/hostinfo"
