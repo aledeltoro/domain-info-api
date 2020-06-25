@@ -14,16 +14,22 @@ var (
 )
 
 // WhoIsGet returns the registrant information of the specified IP
-func WhoIsGet(IP string) *Response {
+func WhoIsGet(IP string) (*Response, error) {
 
 	_, body, err := fasthttp.Get(nil, whoIsAPI+IP)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("WhoisXML API consumption failed: ", err.Error())
+		return &Response{}, err
 	}
 
 	var responseObject Response
-	json.Unmarshal(body, &responseObject)
 
-	return &responseObject
+	err = json.Unmarshal(body, &responseObject)
+	if err != nil {
+		log.Println("JSON encoding failed: ", err.Error())
+		return &Response{}, err
+	}
+
+	return &responseObject, nil
 
 }

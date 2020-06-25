@@ -14,35 +14,41 @@ type WebsiteInfo struct {
 }
 
 // FetchWebsiteInfo returns a new instance of WebsiteInfo w
-func FetchWebsiteInfo(domain string) WebsiteInfo {
+func FetchWebsiteInfo(domain string) (WebsiteInfo, error) {
 
 	var siteInfo WebsiteInfo
 
-	document := scrapeDocument(domain)
+	document, err := scrapeDocument(domain)
+	if err != nil {
+		return WebsiteInfo{}, err
+	}
+
 	siteInfo.fetchTitle(document)
 	siteInfo.fetchLogo(document)
 
-	return siteInfo
+	return siteInfo, nil
 
 }
 
-func scrapeDocument(domain string) *goquery.Document {
+func scrapeDocument(domain string) (*goquery.Document, error) {
 
 	protocol := "https://"
 
 	response, err := http.Get(protocol + domain)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Error: ", err.Error())
+		return &goquery.Document{}, err
 	}
 
 	defer response.Body.Close()
 
 	document, err := goquery.NewDocumentFromReader(response.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Error: ", err.Error())
+		return &goquery.Document{}, err
 	}
 
-	return document
+	return document, nil
 
 }
 

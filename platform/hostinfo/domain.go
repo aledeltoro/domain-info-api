@@ -2,7 +2,6 @@ package hostinfo
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"time"
 )
@@ -20,41 +19,61 @@ type Domain struct {
 }
 
 // NewDomain returns a new Domain based on the given url
-func NewDomain(URL string) *Domain {
+func NewDomain(URL string) (*Domain, error) {
 
 	var domainObject Domain
+	var hostObject *Host
+
+	hostObject, err := NewHost(URL)
+	if err != nil {
+		return &Domain{}, err
+	}
 
 	domainObject = Domain{
 		Name:      URL,
-		HostInfo:  *NewHost(URL),
+		HostInfo:  *hostObject,
 		CreatedAt: time.Now(),
 	}
 
-	return &domainObject
+	return &domainObject, nil
 
 }
 
 // InsertDomain inserts a record into the "host" database
-func (c *Connection) InsertDomain(domain *Domain) {
+func (c *Connection) InsertDomain(domain *Domain) error {
 
-	insertDomainStmt, err := c.DB.Prepare("INSERT INTO host (domain_name, server_changed, ssl_grade, previous_ssl_grade, logo, title, is_down, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id")
+	insertDomainStmt, err := c.DB.Prepare(`
+	INSERT INTO 
+		host (domain_name, server_changed, ssl_grade, previous_ssl_grade, logo, title, is_down, created_at) 
+	VALUES 
+		($1, $2, $3, $4, $5, $6, $7, $8) 
+	RETURNING id
+	`)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Invalid query statement: ", err.Error())
+		return err
 	}
 
 	host := domain.HostInfo
 
 	record := insertDomainStmt.QueryRow(domain.Name, host.ServersChanged, host.Grade, host.PreviousGrade, host.Logo, host.Title, host.IsDown, domain.CreatedAt)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Query operation failed: ", err.Error())
+		return err
 	}
 
 	var lastInsertID int
 	record.Scan(&lastInsertID)
 
-	insertServerStmt, err := c.DB.Prepare("INSERT INTO server (address, ssl_grade, country, owner, host_id) VALUES ($1, $2, $3, $4, $5)")
+	insertServerStmt, err := c.DB.Prepare(`
+	INSERT INTO 
+		server (address, ssl_grade, country, owner, host_id) 
+	VALUES 
+		($1, $2, $3, $4, $5)
+	`)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Invalid query statement: ", err.Error())
+		return err
 	}
 
 	for i := 0; i < len(host.Servers); i++ {
@@ -63,21 +82,25 @@ func (c *Connection) InsertDomain(domain *Domain) {
 
 		_, err := insertServerStmt.Exec(server.Address, server.SslGrade, server.Country, server.Owner, lastInsertID)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("Query operation failed: ", err.Error())
+			return err
 		}
 
 	}
 
+	return nil
+
 }
 
 // GetAllDomains returns a slice of domains from the database
-func (c *Connection) GetAllDomains() Items {
+func (c *Connection) GetAllDomains() (*Items, error) {
 
 	var items Items
 
 	rows, err := c.DB.Query("SELECT * FROM host")
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Query operation failed: ", err.Error())
+		return &Items{}, err
 	}
 
 	defer rows.Close()
@@ -91,13 +114,19 @@ func (c *Connection) GetAllDomains() Items {
 
 		err := rows.Scan(&id, &name, &serverChanged, &grade, &previousGrade, &logo, &title, &isDown, &createdAt)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("Row scan failed: ", err.Error())
+			return &Items{}, err
+		}
+
+		servers, err := c.getAllServers(id)
+		if err != nil {
+			return &Items{}, err
 		}
 
 		domain := Domain{
 			Name: name,
 			HostInfo: Host{
-				Servers:        c.getAllServers(id),
+				Servers:        servers,
 				ServersChanged: serverChanged,
 				Grade:          grade,
 				PreviousGrade:  previousGrade,
@@ -112,11 +141,11 @@ func (c *Connection) GetAllDomains() Items {
 
 	}
 
-	return items
+	return &items, nil
 
 }
 
-func (c *Connection) getAllServers(hostID int) []Server {
+func (c *Connection) getAllServers(hostID int) ([]Server, error) {
 
 	var servers []Server
 
@@ -129,12 +158,14 @@ func (c *Connection) getAllServers(hostID int) []Server {
 		server.host_id=$1
 	`)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Invalid query statement: ", err.Error())
+		return []Server{}, err
 	}
 
 	rows, err := stmt.Query(hostID)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Query operation failed: ", err.Error())
+		return []Server{}, err
 	}
 
 	defer rows.Close()
@@ -145,7 +176,8 @@ func (c *Connection) getAllServers(hostID int) []Server {
 
 		err := rows.Scan(&address, &grade, &country, &owner)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("Row scan failed: ", err.Error())
+			return []Server{}, err
 		}
 
 		server := Server{
@@ -159,12 +191,12 @@ func (c *Connection) getAllServers(hostID int) []Server {
 
 	}
 
-	return servers
+	return servers, nil
 
 }
 
 // CheckDomainExists returns the given domain from the database if it already exists
-func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
+func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, error) {
 
 	stmt, err := c.DB.Prepare(`
 	SELECT
@@ -174,13 +206,21 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 	WHERE 
 		host.domain_name=$1
 	`)
+	if err != nil {
+		log.Println("Invalid query statement: ", err.Error())
+		return &Domain{}, false, err
+	}
 
 	var id, currentGrade string
 	var createdAt time.Time
 
 	err = stmt.QueryRow(domainName).Scan(&id, &currentGrade, &createdAt)
-	if err == sql.ErrNoRows {
-		return &Domain{}, false
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return &Domain{}, false, nil
+		}
+		log.Println("Query operation failed: ", err.Error())
+		return &Domain{}, false, err
 	}
 
 	var domainObject Domain
@@ -195,20 +235,24 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 		server.host_id=$1
 	`)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Invalid query statement: ", err.Error())
+		return &Domain{}, false, err
 	}
 
 	rows, err := stmt.Query(id)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Query operation failed: ", err.Error())
+		return &Domain{}, false, err
 	}
 
 	var address, serverGrade, country, owner string
 
 	for rows.Next() {
 
-		if err := rows.Scan(&address, &serverGrade, &country, &owner); err != nil {
-			log.Fatal(err)
+		err := rows.Scan(&address, &serverGrade, &country, &owner)
+		if err != nil {
+			log.Println("Row scan failed: ", err.Error())
+			return &Domain{}, false, err
 		}
 
 		server := Server{
@@ -226,9 +270,11 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 
 	if diff := checkTimeDiffNow(createdAt); diff >= 1 {
 
-		fmt.Println("Hello")
+		newServers, err := AddServers(domainName)
+		if err != nil {
+			return &Domain{}, false, err
+		}
 
-		newServers := AddServers(domainName)
 		newGrade := GetLowestGrade(newServers)
 
 		serverChanged := haveServersChanged(newServers, oldServers)
@@ -247,7 +293,8 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 				server.host_id = $5
 			`)
 			if err != nil {
-				log.Fatal(err)
+				log.Println("Invalid query statement: ", err.Error())
+				return &Domain{}, false, err
 			}
 
 			for i := 0; i < len(newServers); i++ {
@@ -256,7 +303,8 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 
 				_, err := stmt.Exec(server.Address, server.SslGrade, server.Country, server.Owner, id)
 				if err != nil {
-					log.Fatal(err)
+					log.Println("Query operation failed: ", err.Error())
+					return &Domain{}, false, err
 				}
 
 			}
@@ -273,12 +321,14 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 			host.id = $5
 		`)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("Invalid query statement: ", err.Error())
+			return &Domain{}, false, err
 		}
 
 		_, err = stmt.Exec(serverChanged, newGrade, currentGrade, time.Now(), id)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("Query operation failed: ", err.Error())
+			return &Domain{}, false, err
 		}
 
 	}
@@ -292,7 +342,8 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 			host.domain_name=$1
 	`)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Invalid query statement: ", err.Error())
+		return &Domain{}, false, err
 	}
 
 	var domainGrade, previousGrade, logo, title string
@@ -300,7 +351,10 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 
 	row := stmt.QueryRow(domainName)
 
-	row.Scan(&domainName, &domainServerChanged, &domainGrade, &previousGrade, &logo, &title, &isDown)
+	err = row.Scan(&domainName, &domainServerChanged, &domainGrade, &previousGrade, &logo, &title, &isDown)
+	if err != nil {
+		log.Println("Row scan failed: ", err.Error())
+	}
 
 	domainObject = Domain{
 		Name: domainName,
@@ -315,7 +369,7 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool) {
 		},
 	}
 
-	return &domainObject, true
+	return &domainObject, true, nil
 
 }
 

@@ -14,14 +14,20 @@ func DomainGET(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 
 	return func(ctx *fasthttp.RequestCtx) {
 
-		domains := host.GetAllDomains()
+		domains, err := host.GetAllDomains()
+		if err != nil {
+			ctx.Error("", http.StatusInternalServerError)
+			return 
+		}
 
 		ctx.Response.Header.SetContentType("application/json")
 		ctx.Response.SetStatusCode(http.StatusOK)
 
-		err := json.NewEncoder(ctx).Encode(domains)
+		err = json.NewEncoder(ctx).Encode(domains)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("JSON encoding failed: ", err.Error())
+			ctx.Error("", http.StatusInternalServerError)
+			return 
 		}
 
 	}

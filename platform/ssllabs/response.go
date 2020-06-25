@@ -12,7 +12,7 @@ type EndPoint struct {
 	Grade     string `json:"grade"`
 }
 
-var statusMessages = map[string]bool {
+var StatusMessages = map[string]bool {
 	"ERROR": false,
 	"READY": true,
 }

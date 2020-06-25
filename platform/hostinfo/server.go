@@ -24,18 +24,24 @@ var grades = map[string]int{
 }
 
 // AddServers returns a slice with all of the servers of a given domain
-func AddServers(domain string) []Server {
+func AddServers(domain string) ([]Server, error) {
 
 	var servers []Server
 
-	hostSSLData := sslAPI.SslGet(domain)
+	hostSSLData, err := sslAPI.SslGet(domain)
+	if err != nil {
+		return []Server{}, err
+	}
 
 	var IPAddress string
 
 	for i := 0; i < len(hostSSLData.EndPoints); i++ {
 
 		IPAddress = hostSSLData.EndPoints[i].IPAddress
-		serverRegistry := whoisAPI.WhoIsGet(IPAddress)
+		serverRegistry, err := whoisAPI.WhoIsGet(IPAddress)
+		if err != nil {
+			return []Server{}, err
+		}
 
 		var server = Server{
 			Address:  IPAddress,
@@ -48,7 +54,7 @@ func AddServers(domain string) []Server {
 
 	}
 
-	return servers
+	return servers, nil
 
 }
 

@@ -22,13 +22,26 @@ var statusMessages = map[string]bool{
 }
 
 // NewHost return a Host struct with about the given URL
-func NewHost(URL string) *Host {
+func NewHost(URL string) (*Host, error) {
 
 	var host Host
 
-	servers := AddServers(URL)
-	siteInfo := scraping.FetchWebsiteInfo(URL)
-	status := sslAPI.SslGet(URL).Status
+	servers, err := AddServers(URL)
+	if err != nil {
+		return &Host{}, err
+	}
+	
+	siteInfo, err := scraping.FetchWebsiteInfo(URL)
+	if err != nil {
+		return &Host{}, err
+	}
+	
+	responseObject, err := sslAPI.SslGet(URL)
+	if err != nil {
+		return &Host{}, err
+	}
+
+	status := responseObject.Status
 
 	host = Host{
 		Servers:        servers,
@@ -40,6 +53,6 @@ func NewHost(URL string) *Host {
 		IsDown:         statusMessages[status],
 	}
 
-	return &host
+	return &host, nil
 
 }

@@ -7,19 +7,27 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-const sslAPI = "https://api.ssllabs.com/api/v3/analyze?host="
+const sslAPI = "https://api.ssllabs.com/api/v3/analyze"
 
 // SslGet returns status and endpoints of the specified domain
-func SslGet(domain string) *Response {
+func SslGet(domain string) (*Response, error) {
 
-	_, body, err := fasthttp.Get(nil, sslAPI+domain)
+	hostQuery := "?host="
+
+	_, body, err := fasthttp.Get(nil, sslAPI+hostQuery+domain)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("SSL API consumption failed: ", err.Error())
+		return &Response{}, err
 	}
 
 	var responseObject Response
-	json.Unmarshal(body, &responseObject)
+	
+	err = json.Unmarshal(body, &responseObject)
+	if err != nil {
+		log.Println("JSON encoding failed: ", err.Error())
+		return &Response{}, err
+	}
 
-	return &responseObject
+	return &responseObject, nil
 
 }

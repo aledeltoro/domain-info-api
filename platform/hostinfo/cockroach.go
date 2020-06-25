@@ -34,30 +34,33 @@ var (
 )
 
 // NewConnection creates the 'host' and 'server' tables and returns a connection to the database
-func NewConnection(db *sql.DB) *Connection {
+func NewConnection(db *sql.DB) (*Connection, error) {
 
 	stmt, err := db.Prepare(hostTableQuery)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Invalid query statement: ", err.Error())
+		return &Connection{}, err
 	}
 
 	_, err = stmt.Exec()
 	if err != nil {
-		log.Fatal("Failed creation'host' table: ", err)
+		log.Println("Failed creation 'host' table: ", err)
+		return &Connection{}, err
 	}
 
 	stmt, err = db.Prepare(serverTableQuery)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Invalid query statement: ", err.Error())
+		return &Connection{}, err
 	}
 
 	_, err = stmt.Exec()
 	if err != nil {
-		log.Fatal("Failed creation 'server' table: ", err)
+		log.Println("Failed creation 'server' table: ", err)
+		return &Connection{}, err
 	}
 
-	return &Connection{
-		DB: db,
-	}
+	return &Connection{DB: db}, nil
 
 }
+

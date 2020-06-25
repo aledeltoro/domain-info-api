@@ -21,12 +21,15 @@ func main() {
 
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to establish connection to database: ", err.Error())
 	}
 
 	defer db.Close()
 
-	host := hostinfo.NewConnection(db)
+	host, err := hostinfo.NewConnection(db)
+	if err != nil {
+		log.Fatal("Failed to create database's tables: ", err.Error())
+	}
 
 	router := fasthttprouter.New()
 
