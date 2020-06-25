@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"database/sql"
 	"fmt"
 	"log"
@@ -9,17 +10,20 @@ import (
 	hostinfo "domain-info-api/platform/hostinfo"
 
 	"github.com/buaazp/fasthttprouter"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/valyala/fasthttp"
 )
 
-var (
-	connectionString = "postgres://root@localhost:26257/domain_info_api?sslmode=disable"
-)
+func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("Error loading .env file")
+	}
+}
 
 func main() {
 
-	db, err := sql.Open("postgres", connectionString)
+	db, err := sql.Open("postgres", os.Getenv("CONNECTION_STRING"))
 	if err != nil {
 		log.Fatal("Failed to establish connection to database: ", err.Error())
 	}

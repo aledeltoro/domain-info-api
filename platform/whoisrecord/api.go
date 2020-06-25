@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/valyala/fasthttp"
 )
 
 var (
-	apiKey   = "at_y0Q4RvF1XeSEl1qvQOooAGeihm6vg"
-	whoIsAPI = fmt.Sprintf("https://www.whoisxmlapi.com/whoisserver/WhoisService?apiKey=%s&outputFormat=json&domainName=", apiKey)
+	whoIsAPI = fmt.Sprintf("https://www.whoisxmlapi.com/whoisserver/WhoisService?apiKey=%s&outputFormat=json&domainName=", os.Getenv("WHOIS_API_KEY"))
 )
 
 // WhoIsGet returns the registrant information of the specified IP
