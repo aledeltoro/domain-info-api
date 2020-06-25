@@ -2,6 +2,7 @@ package ssllabs
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 
 	"github.com/valyala/fasthttp"
@@ -21,13 +22,23 @@ func SslGet(domain string) (*Response, error) {
 	}
 
 	var responseObject Response
-	
+
 	err = json.Unmarshal(body, &responseObject)
 	if err != nil {
 		log.Println("JSON encoding failed: ", err.Error())
 		return &Response{}, err
 	}
 
+	status := responseObject.Status
+
+	if status == "DNS" || status == "IN_PROGRESS" {
+		err = errors.New("Error: SSL API couldn't resolve domain name")
+		log.Println(err)
+		return &Response{}, err
+	}
+
 	return &responseObject, nil
 
 }
+
+
