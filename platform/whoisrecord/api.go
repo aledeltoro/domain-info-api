@@ -9,12 +9,11 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-var (
-	whoIsAPI = fmt.Sprintf("https://www.whoisxmlapi.com/whoisserver/WhoisService?apiKey=%s&outputFormat=json&domainName=", os.Getenv("WHOIS_API_KEY"))
-)
 
 // WhoIsGet returns the registrant information of the specified IP
 func WhoIsGet(IP string) (*Response, error) {
+	
+	whoIsAPI := fmt.Sprintf("https://www.whoisxmlapi.com/whoisserver/WhoisService?apiKey=%s&outputFormat=json&domainName=", os.Getenv("WHOIS_API_KEY"))
 
 	_, body, err := fasthttp.Get(nil, whoIsAPI+IP)
 	if err != nil {

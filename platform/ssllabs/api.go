@@ -1,8 +1,8 @@
 package ssllabs
 
 import (
+	"time"
 	"encoding/json"
-	"errors"
 	"log"
 
 	"github.com/valyala/fasthttp"
@@ -15,30 +15,35 @@ func SslGet(domain string) (*Response, error) {
 
 	hostQuery := "?host="
 
-	_, body, err := fasthttp.Get(nil, sslAPI+hostQuery+domain)
-	if err != nil {
-		log.Println("SSL API consumption failed: ", err.Error())
-		return &Response{}, err
-	}
-
 	var responseObject Response
+	var pendingResponse = true
 
-	err = json.Unmarshal(body, &responseObject)
-	if err != nil {
-		log.Println("JSON encoding failed: ", err.Error())
-		return &Response{}, err
-	}
+	for pendingResponse {
 
-	status := responseObject.Status
+		_, body, err := fasthttp.Get(nil, sslAPI+hostQuery+domain)
+		if err != nil {
+			log.Println("SSL API consumption failed: ", err.Error())
+			return &Response{}, err
+		}
 
-	if status == "DNS" || status == "IN_PROGRESS" {
-		err = errors.New("Error: SSL API couldn't resolve domain name")
-		log.Println(err)
-		return &Response{}, err
+		err = json.Unmarshal(body, &responseObject)
+		if err != nil {
+			log.Println("JSON encoding failed: ", err.Error())
+			return &Response{}, err
+		}
+
+		status := responseObject.Status
+
+		log.Printf("SSL API Status: %s", status)
+
+		if status == "DNS" || status == "IN_PROGRESS" {
+			time.Sleep(15 * time.Second)
+		} else {
+			pendingResponse = false
+		}
+
 	}
 
 	return &responseObject, nil
 
 }
-
-
