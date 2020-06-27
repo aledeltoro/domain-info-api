@@ -1,9 +1,9 @@
 package ssllabs
 
 import (
-	"time"
 	"encoding/json"
 	"log"
+	"time"
 
 	"github.com/valyala/fasthttp"
 )

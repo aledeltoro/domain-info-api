@@ -3,6 +3,7 @@ package hostinfo
 import (
 	sslAPI "domain-info-api/platform/ssllabs"
 	scraping "domain-info-api/platform/webscraping"
+	"strings"
 )
 
 // Host represents info for a given Host
@@ -30,12 +31,12 @@ func NewHost(URL string) (*Host, error) {
 	if err != nil {
 		return &Host{}, err
 	}
-	
+
 	siteInfo, err := scraping.FetchWebsiteInfo(URL)
 	if err != nil {
 		return &Host{}, err
 	}
-	
+
 	responseObject, err := sslAPI.SslGet(URL)
 	if err != nil {
 		return &Host{}, err
@@ -49,7 +50,7 @@ func NewHost(URL string) (*Host, error) {
 		Grade:          GetLowestGrade(servers),
 		PreviousGrade:  "",
 		Logo:           siteInfo.Logo,
-		Title:          siteInfo.Title,
+		Title:          strings.TrimSpace(siteInfo.Title),
 		IsDown:         statusMessages[status],
 	}
 
