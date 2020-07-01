@@ -42,7 +42,7 @@ func SslGet(domain string) (*Response, *wrappedErr.Error) {
 
 		status := responseObject.Status
 
-		log.Printf("SSL API Status: %s", status)
+		log.Printf("Domain: '%s'. SSL API Status: %s", domain, status)
 
 		if status == "DNS" || status == "IN_PROGRESS" {
 			time.Sleep(15 * time.Second)

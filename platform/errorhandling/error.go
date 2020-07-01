@@ -22,5 +22,5 @@ func New(status int, methodName, message string) *Error {
 }
 
 func (e *Error) String() string {
-	return fmt.Sprintf("%s: %v. %d", e.Context, e.Message, e.Status)
+	return fmt.Sprintf("%s: %v. Status: %d", e.Context, e.Message, e.Status)
 }

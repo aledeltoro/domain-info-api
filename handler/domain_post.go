@@ -23,6 +23,8 @@ func DomainPOST(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 		ctx.Response.Header.SetBytesV("Access-Control-Allow-Origin", ctx.Request.Header.Peek("Origin"))
 
 		if !validator.IsURL(string(hostArg)) {
+			customErr := wrappedErr.New(400, "DomainPOST", "Invalid domain name")
+			log.Println(customErr)
 			ctx.Response.SetStatusCode(fasthttp.StatusBadRequest)
 			fmt.Fprintln(ctx, "Invalid domain name")
 			return
