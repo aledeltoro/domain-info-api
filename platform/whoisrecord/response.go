@@ -7,7 +7,7 @@ type Response struct {
 
 // RegistryData represents the registry data of the given domain
 type RegistryData struct {
-	Registry	Registrant	`json:"registryData"`
+	Registry Registrant `json:"registryData"`
 }
 
 // Registrant represents the registrant info of a given IP address
@@ -17,6 +17,6 @@ type Registrant struct {
 
 // Info represents the information of the registrant
 type Info struct {
-	Organization string	`json:"organization"`
-	CountryCode string	`json:"countryCode"`
+	Organization string `json:"organization"`
+	CountryCode  string `json:"countryCode"`
 }
