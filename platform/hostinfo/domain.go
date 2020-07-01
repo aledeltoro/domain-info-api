@@ -2,8 +2,11 @@ package hostinfo
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"time"
+
+	wrappedErr "domain-info-api/platform/errorhandling"
 )
 
 // Items represents an array of domains
@@ -19,14 +22,14 @@ type Domain struct {
 }
 
 // NewDomain returns a new Domain based on the given url
-func NewDomain(URL string) (*Domain, error) {
+func NewDomain(URL string) (*Domain, *wrappedErr.Error) {
 
 	var domainObject Domain
 	var hostObject *Host
 
-	hostObject, err := NewHost(URL)
-	if err != nil {
-		return &Domain{}, err
+	hostObject, customErr := NewHost(URL)
+	if customErr != nil {
+		return &Domain{}, customErr
 	}
 
 	domainObject = Domain{
@@ -40,7 +43,9 @@ func NewDomain(URL string) (*Domain, error) {
 }
 
 // InsertDomain inserts a record into the "host" database
-func (c *Connection) InsertDomain(domain *Domain) error {
+func (c *Connection) InsertDomain(domain *Domain) *wrappedErr.Error {
+
+	var customErr *wrappedErr.Error
 
 	insertDomainStmt, err := c.DB.Prepare(`
 	INSERT INTO 
@@ -50,16 +55,19 @@ func (c *Connection) InsertDomain(domain *Domain) error {
 	RETURNING id
 	`)
 	if err != nil {
-		log.Println("Invalid query statement: ", err.Error())
-		return err
+		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
+		customErr = wrappedErr.New(500, "InsertDomain", errMessage)
+		log.Println(customErr)
+		return customErr
 	}
 
 	host := domain.HostInfo
 
 	record := insertDomainStmt.QueryRow(domain.Name, host.ServersChanged, host.Grade, host.PreviousGrade, host.Logo, host.Title, host.IsDown, domain.CreatedAt)
 	if err != nil {
-		log.Println("Query operation failed: ", err.Error())
-		return err
+		errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
+		customErr = wrappedErr.New(500, "InsertDomain", errMessage)
+		return customErr
 	}
 
 	var lastInsertID int
@@ -72,8 +80,10 @@ func (c *Connection) InsertDomain(domain *Domain) error {
 		($1, $2, $3, $4, $5)
 	`)
 	if err != nil {
-		log.Println("Invalid query statement: ", err.Error())
-		return err
+		errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
+		customErr = wrappedErr.New(500, "InsertDomain", errMessage)
+		log.Println(customErr)
+		return customErr
 	}
 
 	for i := 0; i < len(host.Servers); i++ {
@@ -82,8 +92,10 @@ func (c *Connection) InsertDomain(domain *Domain) error {
 
 		_, err := insertServerStmt.Exec(server.Address, server.SslGrade, server.Country, server.Owner, lastInsertID)
 		if err != nil {
-			log.Println("Query operation failed: ", err.Error())
-			return err
+			errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
+			customErr = wrappedErr.New(500, "InsertDomain", errMessage)
+			log.Println(customErr)
+			return customErr
 		}
 
 	}
@@ -93,14 +105,17 @@ func (c *Connection) InsertDomain(domain *Domain) error {
 }
 
 // GetAllDomains returns a slice of domains from the database
-func (c *Connection) GetAllDomains() (*Items, error) {
+func (c *Connection) GetAllDomains() (*Items, *wrappedErr.Error) {
 
 	var items Items
+	var customErr *wrappedErr.Error
 
 	rows, err := c.DB.Query("SELECT * FROM host")
 	if err != nil {
-		log.Println("Query operation failed: ", err.Error())
-		return &Items{}, err
+		errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
+		customErr = wrappedErr.New(500, "GetAllDomains", errMessage)
+		log.Println(customErr)
+		return &Items{}, customErr
 	}
 
 	defer rows.Close()
@@ -112,15 +127,17 @@ func (c *Connection) GetAllDomains() (*Items, error) {
 
 	for rows.Next() {
 
-		err := rows.Scan(&id, &name, &serverChanged, &grade, &previousGrade, &logo, &title, &isDown, &createdAt)
+		var err = rows.Scan(&id, &name, &serverChanged, &grade, &previousGrade, &logo, &title, &isDown, &createdAt)
 		if err != nil {
-			log.Println("Row scan failed: ", err.Error())
-			return &Items{}, err
+			errMessage := fmt.Sprintf("Row scan failed: %s", err.Error())
+			customErr = wrappedErr.New(500, "GetAllDomains", errMessage)
+			log.Println(customErr)
+			return &Items{}, customErr
 		}
 
-		servers, err := c.getAllServers(id)
-		if err != nil {
-			return &Items{}, err
+		servers, customErr := c.getAllServers(id)
+		if customErr != nil {
+			return &Items{}, customErr
 		}
 
 		domain := Domain{
@@ -146,7 +163,9 @@ func (c *Connection) GetAllDomains() (*Items, error) {
 }
 
 // CheckDomainExists returns the given domain from the database if it already exists
-func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, error) {
+func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrappedErr.Error) {
+
+	var customErr *wrappedErr.Error
 
 	stmt, err := c.DB.Prepare(`
 	SELECT
@@ -157,8 +176,10 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, error)
 		host.domain_name=$1
 	`)
 	if err != nil {
-		log.Println("Invalid query statement: ", err.Error())
-		return &Domain{}, false, err
+		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
+		customErr = wrappedErr.New(500, "CheckDomainExists", errMessage)
+		log.Println(customErr)
+		return &Domain{}, false, customErr
 	}
 
 	var hostID int
@@ -170,20 +191,22 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, error)
 		if err == sql.ErrNoRows {
 			return &Domain{}, false, nil
 		}
-		log.Println("Query operation failed: ", err.Error())
-		return &Domain{}, false, err
+		errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
+		customErr = wrappedErr.New(500, "CheckDomainExists", errMessage)
+		log.Println(customErr)
+		return &Domain{}, false, customErr
 	}
 
-	oldServers, err := c.getAllServers(hostID)
-	if err != nil {
-		return &Domain{}, false, err
+	oldServers, customErr := c.getAllServers(hostID)
+	if customErr != nil {
+		return &Domain{}, false, customErr
 	}
 
 	if diff := checkTimeDiffNow(createdAt); diff >= 1 {
 
-		newServers, err := AddServers(domainName)
-		if err != nil {
-			return &Domain{}, false, err
+		newServers, customErr := AddServers(domainName)
+		if customErr != nil {
+			return &Domain{}, false, customErr
 		}
 
 		newGrade := GetLowestGrade(newServers)
@@ -192,9 +215,9 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, error)
 
 		if serverChanged {
 
-			err = c.updateAllServers(newServers, hostID)
-			if err != nil {
-				return &Domain{}, false, err
+			customErr = c.updateAllServers(newServers, hostID)
+			if customErr != nil {
+				return &Domain{}, false, customErr
 			}
 
 		}
@@ -209,21 +232,25 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, error)
 			host.id = $5
 		`)
 		if err != nil {
-			log.Println("Invalid query statement: ", err.Error())
-			return &Domain{}, false, err
+			errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
+			customErr = wrappedErr.New(500, "CheckDomainExists", errMessage)
+			log.Println(customErr)
+			return &Domain{}, false, customErr
 		}
 
 		_, err = stmt.Exec(serverChanged, newGrade, currentGrade, time.Now(), hostID)
 		if err != nil {
-			log.Println("Query operation failed: ", err.Error())
-			return &Domain{}, false, err
+			errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
+			customErr = wrappedErr.New(500, "CheckDomainExists", errMessage)
+			log.Println(customErr)
+			return &Domain{}, false, customErr
 		}
 
 	}
 
-	domainObject, err := c.GetDomain(domainName)
-	if err != nil {
-		return &Domain{}, false, err
+	domainObject, customErr := c.GetDomain(domainName)
+	if customErr != nil {
+		return &Domain{}, false, customErr
 	}
 
 	return domainObject, true, nil
@@ -231,12 +258,16 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, error)
 }
 
 // GetDomain returns a single domain specified by the domain name
-func (c *Connection) GetDomain(domainName string) (*Domain, error) {
+func (c *Connection) GetDomain(domainName string) (*Domain, *wrappedErr.Error) {
+
+	var customErr *wrappedErr.Error
 
 	stmt, err := c.DB.Prepare("SELECT * FROM host WHERE host.domain_name=$1")
 	if err != nil {
-		log.Println("Invalid query statement: ", err.Error())
-		return &Domain{}, err
+		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
+		customErr = wrappedErr.New(500, "GetDomain", errMessage)
+		log.Println(customErr)
+		return &Domain{}, customErr
 	}
 
 	row := stmt.QueryRow(domainName)
@@ -248,13 +279,15 @@ func (c *Connection) GetDomain(domainName string) (*Domain, error) {
 
 	err = row.Scan(&id, &domainName, &domainServerChanged, &domainGrade, &previousGrade, &logo, &title, &isDown, &createdAt)
 	if err != nil {
-		log.Println("Row scan failed: ", err.Error())
-		return &Domain{}, err
+		errMessage := fmt.Sprintf("Row scan failed: %s", err.Error())
+		customErr = wrappedErr.New(500, "GetDomain", errMessage)
+		log.Println(customErr)
+		return &Domain{}, customErr
 	}
 
-	servers, err := c.getAllServers(id)
-	if err != nil {
-		return &Domain{}, err
+	servers, customErr := c.getAllServers(id)
+	if customErr != nil {
+		return &Domain{}, customErr
 	}
 
 	domainObject := Domain{
@@ -276,9 +309,10 @@ func (c *Connection) GetDomain(domainName string) (*Domain, error) {
 }
 
 // Returns from the database a slice of servers for a given host id
-func (c *Connection) getAllServers(hostID int) ([]Server, error) {
+func (c *Connection) getAllServers(hostID int) ([]Server, *wrappedErr.Error) {
 
 	var servers []Server
+	var newErr *wrappedErr.Error
 
 	stmt, err := c.DB.Prepare(`
 	SELECT 
@@ -289,14 +323,18 @@ func (c *Connection) getAllServers(hostID int) ([]Server, error) {
 		server.host_id=$1
 	`)
 	if err != nil {
-		log.Println("Invalid query statement: ", err.Error())
-		return []Server{}, err
+		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
+		newErr = wrappedErr.New(500, "getAllServers", errMessage)
+		log.Println(newErr)
+		return []Server{}, newErr
 	}
 
 	rows, err := stmt.Query(hostID)
 	if err != nil {
-		log.Println("Query operation failed: ", err.Error())
-		return []Server{}, err
+		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
+		newErr = wrappedErr.New(500, "getAllServers", errMessage)
+		log.Println(newErr)
+		return []Server{}, newErr
 	}
 
 	defer rows.Close()
@@ -307,8 +345,10 @@ func (c *Connection) getAllServers(hostID int) ([]Server, error) {
 
 		err := rows.Scan(&address, &grade, &country, &owner)
 		if err != nil {
-			log.Println("Row scan failed: ", err.Error())
-			return []Server{}, err
+			errMessage := fmt.Sprintf("Row scan failed: %s", err.Error())
+			newErr = wrappedErr.New(500, "getAllServers", errMessage)
+			log.Println(newErr)
+			return []Server{}, newErr
 		}
 
 		server := Server{
@@ -326,7 +366,9 @@ func (c *Connection) getAllServers(hostID int) ([]Server, error) {
 
 }
 
-func (c *Connection) updateAllServers(newServers []Server, hostID int) error {
+func (c *Connection) updateAllServers(newServers []Server, hostID int) *wrappedErr.Error {
+
+	var customErr *wrappedErr.Error
 
 	stmt, err := c.DB.Prepare(`
 	UPDATE server
@@ -338,8 +380,10 @@ func (c *Connection) updateAllServers(newServers []Server, hostID int) error {
 		server.host_id = $5
 	`)
 	if err != nil {
-		log.Println("Invalid query statement: ", err.Error())
-		return err
+		errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
+		customErr = wrappedErr.New(500, "updateAllServers", errMessage)
+		log.Println(customErr)
+		return customErr
 	}
 
 	for i := 0; i < len(newServers); i++ {
@@ -348,8 +392,10 @@ func (c *Connection) updateAllServers(newServers []Server, hostID int) error {
 
 		_, err := stmt.Exec(server.Address, server.SslGrade, server.Country, server.Owner, hostID)
 		if err != nil {
-			log.Println("Query operation failed: ", err.Error())
-			return err
+			errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
+			customErr = wrappedErr.New(500, "updateAllServers", errMessage)
+			log.Println(customErr)
+			return customErr
 		}
 
 	}

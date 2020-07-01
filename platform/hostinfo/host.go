@@ -1,6 +1,7 @@
 package hostinfo
 
 import (
+	wrappedErr "domain-info-api/platform/errorhandling"
 	sslAPI "domain-info-api/platform/ssllabs"
 	scraping "domain-info-api/platform/webscraping"
 	"strings"
@@ -23,23 +24,23 @@ var statusMessages = map[string]bool{
 }
 
 // NewHost return a Host struct with about the given URL
-func NewHost(URL string) (*Host, error) {
+func NewHost(URL string) (*Host, *wrappedErr.Error) {
 
 	var host Host
 
-	servers, err := AddServers(URL)
-	if err != nil {
-		return &Host{}, err
+	servers, customErr := AddServers(URL)
+	if customErr != nil {
+		return &Host{}, customErr
 	}
 
-	siteInfo, err := scraping.FetchWebsiteInfo(URL)
-	if err != nil {
-		return &Host{}, err
+	siteInfo, customErr := scraping.FetchWebsiteInfo(URL)
+	if customErr != nil {
+		return &Host{}, customErr
 	}
 
-	responseObject, err := sslAPI.SslGet(URL)
-	if err != nil {
-		return &Host{}, err
+	responseObject, customErr := sslAPI.SslGet(URL)
+	if customErr != nil {
+		return &Host{}, customErr
 	}
 
 	status := responseObject.Status

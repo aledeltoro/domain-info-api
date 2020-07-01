@@ -1,10 +1,12 @@
 package handler
 
 import (
-	hostinfo "domain-info-api/platform/hostinfo"
 	"encoding/json"
 	"fmt"
 	"log"
+
+	wrappedErr "domain-info-api/platform/errorhandling"
+	hostinfo "domain-info-api/platform/hostinfo"
 
 	validator "github.com/asaskevich/govalidator"
 	"github.com/valyala/fasthttp"
@@ -26,20 +28,20 @@ func DomainPOST(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 			return
 		}
 
-		domain, exists, err := host.CheckDomainExists(string(hostArg))
-		if err != nil {
+		domain, exists, customErr := host.CheckDomainExists(string(hostArg))
+		if customErr != nil {
 			ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
 			return
 		}
 
 		if !exists {
-			domain, err = hostinfo.NewDomain(string(hostArg))
-			if err != nil {
+			domain, customErr = hostinfo.NewDomain(string(hostArg))
+			if customErr != nil {
 				ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
 				return
 			}
-			err = host.InsertDomain(domain)
-			if err != nil {
+			customErr = host.InsertDomain(domain)
+			if customErr != nil {
 				ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
 				return
 			}
@@ -48,9 +50,11 @@ func DomainPOST(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 		ctx.Response.SetStatusCode(fasthttp.StatusCreated)
 		ctx.Response.Header.SetContentType("application/json")
 
-		err = json.NewEncoder(ctx).Encode(domain.HostInfo)
+		err := json.NewEncoder(ctx).Encode(domain.HostInfo)
 		if err != nil {
-			log.Println("JSON encoding failed: ", err.Error())
+			errMessage := fmt.Sprintf("JSON encoding failed: %s", err.Error())
+			customErr := wrappedErr.New(500, "DomainPOST", errMessage)
+			log.Println(customErr)
 			ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
 			return
 		}

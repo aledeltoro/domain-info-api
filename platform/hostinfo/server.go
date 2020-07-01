@@ -1,6 +1,7 @@
 package hostinfo
 
 import (
+	wrappedErr "domain-info-api/platform/errorhandling"
 	sslAPI "domain-info-api/platform/ssllabs"
 	whoisAPI "domain-info-api/platform/whoisrecord"
 )
@@ -24,13 +25,13 @@ var grades = map[string]int{
 }
 
 // AddServers returns a slice with all of the servers of a given domain
-func AddServers(domain string) ([]Server, error) {
+func AddServers(domain string) ([]Server, *wrappedErr.Error) {
 
 	var servers []Server
 
-	hostSSLData, err := sslAPI.SslGet(domain)
-	if err != nil {
-		return []Server{}, err
+	hostSSLData, customErr := sslAPI.SslGet(domain)
+	if customErr != nil {
+		return []Server{}, customErr
 	}
 
 	var IPAddress string
@@ -38,9 +39,9 @@ func AddServers(domain string) ([]Server, error) {
 	for i := 0; i < len(hostSSLData.EndPoints); i++ {
 
 		IPAddress = hostSSLData.EndPoints[i].IPAddress
-		serverRegistry, err := whoisAPI.WhoIsGet(IPAddress)
-		if err != nil {
-			return []Server{}, err
+		serverRegistry, customErr := whoisAPI.WhoIsGet(IPAddress)
+		if customErr != nil {
+			return []Server{}, customErr
 		}
 
 		var server = Server{

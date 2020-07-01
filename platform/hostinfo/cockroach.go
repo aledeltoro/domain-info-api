@@ -2,7 +2,10 @@ package hostinfo
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+
+	wrappedErr "domain-info-api/platform/errorhandling"
 )
 
 // Connection represents an active connection to a database
@@ -34,33 +37,42 @@ var (
 )
 
 // NewConnection creates the 'host' and 'server' tables and returns a connection to the database
-func NewConnection(db *sql.DB) (*Connection, error) {
+func NewConnection(db *sql.DB) (*Connection, *wrappedErr.Error) {
+
+	var customErr *wrappedErr.Error
 
 	stmt, err := db.Prepare(hostTableQuery)
 	if err != nil {
-		log.Println("Invalid query statement: ", err.Error())
-		return &Connection{}, err
+		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
+		customErr = wrappedErr.New(500, "NewConnection", errMessage)
+		log.Println(customErr)
+		return &Connection{}, customErr
 	}
 
 	_, err = stmt.Exec()
 	if err != nil {
-		log.Println("Failed creation 'host' table: ", err)
-		return &Connection{}, err
+		errMessage := fmt.Sprintf("Failed creation 'host' table: %s", err.Error())
+		customErr = wrappedErr.New(500, "NewConnection", errMessage)
+		log.Println(customErr)
+		return &Connection{}, customErr
 	}
 
 	stmt, err = db.Prepare(serverTableQuery)
 	if err != nil {
-		log.Println("Invalid query statement: ", err.Error())
-		return &Connection{}, err
+		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
+		customErr = wrappedErr.New(500, "NewConnection", errMessage)
+		log.Println(customErr)
+		return &Connection{}, customErr
 	}
 
 	_, err = stmt.Exec()
 	if err != nil {
-		log.Println("Failed creation 'server' table: ", err)
-		return &Connection{}, err
+		errMessage := fmt.Sprintf("Failed creation 'server' table: %s", err.Error())
+		customErr = wrappedErr.New(500, "NewConnection", errMessage)
+		log.Println(customErr)
+		return &Connection{}, customErr
 	}
 
 	return &Connection{DB: db}, nil
 
 }
-

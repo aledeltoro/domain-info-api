@@ -1,8 +1,11 @@
 package webscraping
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+
+	wrappedErr "domain-info-api/platform/errorhandling"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -14,13 +17,13 @@ type WebsiteInfo struct {
 }
 
 // FetchWebsiteInfo returns a new instance of WebsiteInfo w
-func FetchWebsiteInfo(domain string) (WebsiteInfo, error) {
+func FetchWebsiteInfo(domain string) (WebsiteInfo, *wrappedErr.Error) {
 
 	var siteInfo WebsiteInfo
 
-	document, err := scrapeDocument(domain)
-	if err != nil {
-		return WebsiteInfo{}, err
+	document, customErr := scrapeDocument(domain)
+	if customErr != nil {
+		return WebsiteInfo{}, customErr
 	}
 
 	siteInfo.fetchTitle(document)
@@ -30,22 +33,28 @@ func FetchWebsiteInfo(domain string) (WebsiteInfo, error) {
 
 }
 
-func scrapeDocument(domain string) (*goquery.Document, error) {
+func scrapeDocument(domain string) (*goquery.Document, *wrappedErr.Error) {
+
+	var customErr *wrappedErr.Error
 
 	protocol := "https://"
 
 	response, err := http.Get(protocol + domain)
 	if err != nil {
-		log.Println("Error: ", err.Error())
-		return &goquery.Document{}, err
+		errMessage := fmt.Sprintf("Error: %s", err.Error())
+		customErr = wrappedErr.New(500, "scrapeDocument", errMessage)
+		log.Println(customErr)
+		return &goquery.Document{}, customErr
 	}
 
 	defer response.Body.Close()
 
 	document, err := goquery.NewDocumentFromReader(response.Body)
 	if err != nil {
-		log.Println("Error: ", err.Error())
-		return &goquery.Document{}, err
+		errMessage := fmt.Sprintf("Error: %s", err.Error())
+		customErr = wrappedErr.New(500, "scrapeDocument", errMessage)
+		log.Println(customErr)
+		return &goquery.Document{}, customErr
 	}
 
 	return document, nil

@@ -30,9 +30,9 @@ func main() {
 
 	defer db.Close()
 
-	host, err := hostinfo.NewConnection(db)
-	if err != nil {
-		log.Fatal("Failed to create database's tables: ", err.Error())
+	host, customErr := hostinfo.NewConnection(db)
+	if customErr != nil {
+		log.Fatal(customErr)
 	}
 
 	router := fasthttprouter.New()

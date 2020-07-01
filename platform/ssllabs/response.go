@@ -11,4 +11,3 @@ type EndPoint struct {
 	IPAddress string `json:"ipAddress"`
 	Grade     string `json:"grade"`
 }
-
