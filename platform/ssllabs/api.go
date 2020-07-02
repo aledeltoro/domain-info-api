@@ -21,6 +21,8 @@ func SslGet(domain string) (*Response, *wrappedErr.Error) {
 	var responseObject Response
 	var pendingResponse = true
 	var customErr *wrappedErr.Error
+	
+	startTime := time.Now()
 
 	for pendingResponse {
 
@@ -43,6 +45,15 @@ func SslGet(domain string) (*Response, *wrappedErr.Error) {
 		status := responseObject.Status
 
 		log.Printf("Domain: '%s'. SSL API Status: %s", domain, status)
+
+		timeout := time.Now().Sub(startTime).Minutes()
+
+		if timeout >= float64(2) {
+			errMessage := fmt.Sprint("Timeout error: domain could not be resolved in time")
+			customErr = wrappedErr.New(408, "SslGet", errMessage)
+			log.Println(customErr)
+			return &Response{}, customErr
+		}
 
 		if status == "DNS" || status == "IN_PROGRESS" {
 			time.Sleep(15 * time.Second)

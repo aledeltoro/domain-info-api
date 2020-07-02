@@ -39,9 +39,16 @@ func DomainPOST(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 		if !exists {
 			domain, customErr = hostinfo.NewDomain(string(hostArg))
 			if customErr != nil {
+
+				if customErr.Status == 408 {
+					ctx.Response.SetStatusCode(fasthttp.StatusRequestTimeout)
+					fmt.Fprintln(ctx, customErr.Message)
+				}
+
 				ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
 				return
 			}
+
 			customErr = host.InsertDomain(domain)
 			if customErr != nil {
 				ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
