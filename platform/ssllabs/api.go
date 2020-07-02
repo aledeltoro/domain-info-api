@@ -49,16 +49,22 @@ func SslGet(domain string) (*Response, *wrappedErr.Error) {
 		timeout := time.Now().Sub(startTime).Minutes()
 
 		if timeout >= float64(2) {
-			errMessage := fmt.Sprint("Timeout error: domain could not be resolved in time")
+			errMessage := fmt.Sprint("Timeout error: domain could not be resolved in time. Try again later")
 			customErr = wrappedErr.New(408, "SslGet", errMessage)
 			log.Println(customErr)
 			return &Response{}, customErr
 		}
 
+
 		if status == "DNS" || status == "IN_PROGRESS" {
 			time.Sleep(15 * time.Second)
-		} else {
+		} else if status == "READY" || status == "ERROR" {
 			pendingResponse = false
+		} else {
+			errMessage := fmt.Sprintf("Unknown status found on SSL Labs API response. Try again later")
+			customErr = wrappedErr.New(501, "SslGet", errMessage)
+			log.Println(customErr)
+			return &Response{}, customErr
 		}
 
 	}
