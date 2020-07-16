@@ -49,7 +49,7 @@ func SslGet(domain string) (*Response, *wrappedErr.Error) {
 		timeout := time.Now().Sub(startTime).Minutes()
 
 		if timeout >= float64(2) {
-			errMessage := fmt.Sprint("Timeout error: domain could not be resolved in time. Try again later")
+			errMessage := fmt.Sprint("Domain could not be resolved in time. Try again later")
 			customErr = wrappedErr.New(408, "SslGet", errMessage)
 			log.Println(customErr)
 			return &Response{}, customErr
