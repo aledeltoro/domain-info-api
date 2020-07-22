@@ -2,7 +2,7 @@
 
 API for a service that allows us to retrieve information about a domain and know if the settings have changed, based on the [SSL Labs API](https://github.com/ssllabs/ssllabs-scan). 
 
-## Getting started
+## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development. 
 
@@ -36,12 +36,20 @@ As of now, in order to get the data we need from the **whois** command, we need 
 
 **NOTE**: After setting up these two services, make sure to add the connection string and API key into a `.env` file and put it at the root of the project.  
 
-## Installation
+### Installation
 
 Once you have [installed go](https://golang.org/doc/install), run this command to get a copy of the project: 
 
 ```
 git clone https://github.com/aledeltoro/domain-info-api.git
+```
+
+## Usage
+
+In order to start the API, run the following command at the root of the project: 
+
+```
+go run main.go
 ```
 
 ## Built With
