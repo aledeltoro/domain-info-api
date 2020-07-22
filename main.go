@@ -42,6 +42,9 @@ func main() {
 
 	fmt.Println("Listening on port 3000")
 
-	fasthttp.ListenAndServe(":3000", router.Handler)
+	err = fasthttp.ListenAndServe(":3000", router.Handler)
+	if err != nil {
+		log.Fatal("Failed to listen to port 3000")
+	}
 
 }
