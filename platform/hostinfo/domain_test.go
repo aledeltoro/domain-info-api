@@ -59,6 +59,15 @@ func newMock() (*sql.DB, sqlmock.Sqlmock) {
 
 }
 
+func setUpTables() (hostRows, serverRows *sqlmock.Rows) {
+
+	hostRows = sqlmock.NewRows([]string{"id", "domain_name", "server_changed", "ssl_grade", "previous_ssl_grade", "logo", "title", "is_down", "created_at"})
+	serverRows = sqlmock.NewRows([]string{"id", "address", "ssl_grade", "country", "owner", "host_id"})
+
+	return
+
+}
+
 func TestInsertDomain(t *testing.T) {
 
 	db, mock := newMock()
@@ -110,6 +119,7 @@ func TestInsertDomain(t *testing.T) {
 func TestGetAllDomains(t *testing.T) {
 
 	db, mock := newMock()
+	hostRows, serverRows := setUpTables()
 
 	query := "SELECT * FROM host"
 
@@ -122,10 +132,6 @@ func TestGetAllDomains(t *testing.T) {
 		server.host_id=$1
 	`
 
-	hostRows := sqlmock.NewRows([]string{"id", "domain_name", "server_changed", "ssl_grade", "previous_ssl_grade", "logo", "title", "is_down", "created_at"})
-	
-	serverRows := sqlmock.NewRows([]string{"id", "address", "ssl_grade", "country", "owner", "host_id"})
-	
 	for i := 0; i < 3; i++ {
 
 		server := testHost.Servers[i]
@@ -137,11 +143,13 @@ func TestGetAllDomains(t *testing.T) {
 	}
 
 	mock.ExpectQuery(query).WillReturnRows(hostRows)
-	
+
 	for i := 0; i < 3; i++ {
+
 		serverStmt := mock.ExpectPrepare(serverQuery)
-		
-		serverStmt.ExpectQuery().WithArgs(i).WillReturnRows(sqlmock.NewRows([]string{"address", "ssl_grade", "country", "owner"}))
+		serverStmt.ExpectQuery().
+			WithArgs(i).
+			WillReturnRows(sqlmock.NewRows([]string{"address", "ssl_grade", "country", "owner"}))
 
 	}
 
@@ -162,6 +170,7 @@ func TestGetAllDomains(t *testing.T) {
 func TestGetDomain(t *testing.T) {
 
 	db, mock := newMock()
+	hostRows, serverRows := setUpTables()
 
 	query := "SELECT * FROM host WHERE host.domain_name=$1"
 
@@ -173,10 +182,6 @@ func TestGetDomain(t *testing.T) {
 	WHERE 
 		server.host_id=$1
 	`
-
-	hostRows := sqlmock.NewRows([]string{"id", "domain_name", "server_changed", "ssl_grade", "previous_ssl_grade", "logo", "title", "is_down", "created_at"})
-
-	serverRows := sqlmock.NewRows([]string{"id", "address", "ssl_grade", "country", "owner", "host_id"})
 
 	hostRows.AddRow(0, testDomain.Name, testHost.ServersChanged, testHost.Grade, testHost.PreviousGrade, testHost.Logo, testHost.Title, testHost.IsDown, testDomain.CreatedAt)
 
