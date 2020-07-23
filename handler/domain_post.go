@@ -26,7 +26,7 @@ func DomainPOST(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 			customErr := wrappedErr.New(400, "DomainPOST", "Invalid domain name")
 			log.Println(customErr)
 			ctx.Response.SetStatusCode(fasthttp.StatusBadRequest)
-			fmt.Fprintln(ctx, "Invalid domain name")
+			fmt.Fprintln(ctx, customErr.Message.Error())
 			return
 		}
 
