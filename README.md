@@ -59,6 +59,7 @@ go run main.go
 * [Godotenv](https://github.com/joho/godotenv) - Loads environment variables from `.env`
 * [Goquery](https://github.com/PuerkitoBio/goquery) - Allows web scraping for the parts we want from a page
 * [Govalidator](https://github.com/asaskevich/govalidator) - A package of validators and sanitizers based on [validator.js](https://github.com/validatorjs/validator.js)
+* [Go-sqlmock](https://github.com/DATA-DOG/go-sqlmock) - SQL mock driver to test database interactions
 
 ## License
 
