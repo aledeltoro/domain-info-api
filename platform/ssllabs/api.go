@@ -13,15 +13,15 @@ import (
 
 const sslAPI = "https://api.ssllabs.com/api/v3/analyze"
 
-// SslGet returns status and endpoints of the specified domain
-func SslGet(domain string) (*Response, *wrappedErr.Error) {
+// Get returns status and endpoints of the specified domain
+func Get(domain string) (*Response, *wrappedErr.Error) {
 
 	hostQuery := "?host="
 
 	var responseObject Response
 	var pendingResponse = true
 	var customErr *wrappedErr.Error
-	
+
 	startTime := time.Now()
 
 	for pendingResponse {
@@ -29,7 +29,7 @@ func SslGet(domain string) (*Response, *wrappedErr.Error) {
 		_, body, err := fasthttp.Get(nil, sslAPI+hostQuery+domain)
 		if err != nil {
 			errMessage := fmt.Sprintf("SSL API consumption failed: %s", err.Error())
-			customErr = wrappedErr.New(500, "SslGet", errMessage)
+			customErr = wrappedErr.New(500, "Get", errMessage)
 			log.Println(customErr)
 			return &Response{}, customErr
 		}
@@ -37,7 +37,7 @@ func SslGet(domain string) (*Response, *wrappedErr.Error) {
 		err = json.Unmarshal(body, &responseObject)
 		if err != nil {
 			errMessage := fmt.Sprintf("JSON encoding failed: %s", err.Error())
-			customErr = wrappedErr.New(500, "SslGet", errMessage)
+			customErr = wrappedErr.New(500, "Get", errMessage)
 			log.Println(customErr)
 			return &Response{}, customErr
 		}
@@ -50,11 +50,10 @@ func SslGet(domain string) (*Response, *wrappedErr.Error) {
 
 		if timeout >= float64(2) {
 			errMessage := fmt.Sprint("Domain could not be resolved in time. Try again later")
-			customErr = wrappedErr.New(408, "SslGet", errMessage)
+			customErr = wrappedErr.New(408, "Get", errMessage)
 			log.Println(customErr)
 			return &Response{}, customErr
 		}
-
 
 		if status == "DNS" || status == "IN_PROGRESS" {
 			time.Sleep(15 * time.Second)
@@ -62,7 +61,7 @@ func SslGet(domain string) (*Response, *wrappedErr.Error) {
 			pendingResponse = false
 		} else {
 			errMessage := fmt.Sprintf("Unknown status found on SSL Labs API response. Try again later")
-			customErr = wrappedErr.New(501, "SslGet", errMessage)
+			customErr = wrappedErr.New(501, "Get", errMessage)
 			log.Println(customErr)
 			return &Response{}, customErr
 		}
