@@ -16,16 +16,18 @@ import (
 )
 
 func init() {
+
 	if err := godotenv.Load(); err != nil {
-		log.Println("Error loading .env file")
+		log.Fatal("Error loading .env file")
 	}
+
 }
 
 func main() {
 
 	db, err := sql.Open("postgres", os.Getenv("CONNECTION_STRING"))
 	if err != nil {
-		log.Fatal("Failed to establish connection to database: ", err.Error())
+		log.Fatalf("Failed to establish connection to database: %s", err.Error())
 	}
 
 	defer db.Close()
@@ -44,7 +46,7 @@ func main() {
 
 	err = fasthttp.ListenAndServe(":3000", router.Handler)
 	if err != nil {
-		log.Fatal("Failed to listen to port 3000")
+		log.Fatalf("Failed to listen to port 3000: %s", err.Error())
 	}
 
 }

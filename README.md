@@ -44,6 +44,15 @@ Once you have [installed go](https://golang.org/doc/install), run this command t
 git clone https://github.com/aledeltoro/domain-info-api.git
 ```
 
+## Running the tests
+In order to run the tests, run the following command at the root of the project:
+
+```
+go test ./...
+```
+
+**DISCLAIMER**: Some packages may not have tests included, which means once we run the command above the following message will log on the CLI alongside the name of certain packages: `[no test files]`
+
 ## Usage
 
 In order to start the API, run the following command at the root of the project: 
