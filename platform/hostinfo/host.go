@@ -38,7 +38,7 @@ func NewHost(URL string) (*Host, *wrappedErr.Error) {
 		return &Host{}, customErr
 	}
 
-	responseObject, customErr := sslAPI.SslGet(URL)
+	responseObject, customErr := sslAPI.Get(URL)
 	if customErr != nil {
 		return &Host{}, customErr
 	}

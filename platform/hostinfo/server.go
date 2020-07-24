@@ -29,7 +29,7 @@ func AddServers(domain string) ([]Server, *wrappedErr.Error) {
 
 	var servers []Server
 
-	hostSSLData, customErr := sslAPI.SslGet(domain)
+	hostSSLData, customErr := sslAPI.Get(domain)
 	if customErr != nil {
 		return []Server{}, customErr
 	}
@@ -39,7 +39,7 @@ func AddServers(domain string) ([]Server, *wrappedErr.Error) {
 	for i := 0; i < len(hostSSLData.EndPoints); i++ {
 
 		IPAddress = hostSSLData.EndPoints[i].IPAddress
-		serverRegistry, customErr := whoisAPI.WhoIsGet(IPAddress)
+		serverRegistry, customErr := whoisAPI.Get(IPAddress)
 		if customErr != nil {
 			return []Server{}, customErr
 		}

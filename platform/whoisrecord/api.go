@@ -11,8 +11,8 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-// WhoIsGet returns the registrant information of the specified IP
-func WhoIsGet(IP string) (*Response, *wrappedErr.Error) {
+// Get returns the registrant information of the specified IP
+func Get(IP string) (*Response, *wrappedErr.Error) {
 
 	var customErr *wrappedErr.Error
 
@@ -21,7 +21,7 @@ func WhoIsGet(IP string) (*Response, *wrappedErr.Error) {
 	_, body, err := fasthttp.Get(nil, whoIsAPI+IP)
 	if err != nil {
 		errMessage := fmt.Sprintf("WhoisXML API consumption failed: %s", err.Error())
-		customErr = wrappedErr.New(500, "WhoIsGet", errMessage)
+		customErr = wrappedErr.New(500, "Get", errMessage)
 		log.Println(customErr)
 		return &Response{}, customErr
 	}
@@ -31,7 +31,7 @@ func WhoIsGet(IP string) (*Response, *wrappedErr.Error) {
 	err = json.Unmarshal(body, &responseObject)
 	if err != nil {
 		errMessage := fmt.Sprintf("JSON enconding failed: %s", err.Error())
-		customErr = wrappedErr.New(500, "WhoIsGet", errMessage)
+		customErr = wrappedErr.New(500, "Get", errMessage)
 		log.Println(customErr)
 		return &Response{}, customErr
 	}
