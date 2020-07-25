@@ -37,7 +37,7 @@ func scrapeDocument(domain string) (*goquery.Document, *wrappedErr.Error) {
 
 	var customErr *wrappedErr.Error
 
-	protocol := "https://"
+	protocol := "http://"
 
 	response, err := http.Get(protocol + domain)
 	if err != nil {
@@ -72,11 +72,11 @@ func (w *WebsiteInfo) fetchLogo(document *goquery.Document) {
 
 	document.Find("link").EachWithBreak(func(index int, element *goquery.Selection) bool {
 
-		rel, exists := element.Attr("rel")
+		rel, _ := element.Attr("rel")
 
-		var isIconReal bool = rel == "shortcut icon" || rel == "icon"
+		var iconExists bool = rel == "shortcut icon" || rel == "icon"
 
-		if exists && isIconReal {
+		if iconExists {
 
 			logo, exists := element.Attr("href")
 			if exists {

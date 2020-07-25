@@ -49,6 +49,8 @@ func NewConnection(db *sql.DB) (*Connection, *wrappedErr.Error) {
 		return &Connection{}, customErr
 	}
 
+	defer stmt.Close()
+
 	_, err = stmt.Exec()
 	if err != nil {
 		errMessage := fmt.Sprintf("Failed creation 'host' table: %s", err.Error())
@@ -64,6 +66,8 @@ func NewConnection(db *sql.DB) (*Connection, *wrappedErr.Error) {
 		log.Println(customErr)
 		return &Connection{}, customErr
 	}
+
+	defer stmt.Close()
 
 	_, err = stmt.Exec()
 	if err != nil {

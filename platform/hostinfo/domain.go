@@ -61,6 +61,8 @@ func (c *Connection) InsertDomain(domain *Domain) *wrappedErr.Error {
 		return customErr
 	}
 
+	defer insertDomainStmt.Close()
+
 	host := domain.HostInfo
 
 	record := insertDomainStmt.QueryRow(domain.Name, host.ServersChanged, host.Grade, host.PreviousGrade, host.Logo, host.Title, host.IsDown, domain.CreatedAt)
@@ -85,6 +87,8 @@ func (c *Connection) InsertDomain(domain *Domain) *wrappedErr.Error {
 		log.Println(customErr)
 		return customErr
 	}
+
+	defer insertServerStmt.Close()
 
 	for i := 0; i < len(host.Servers); i++ {
 
@@ -182,6 +186,8 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 		return &Domain{}, false, customErr
 	}
 
+	defer stmt.Close()
+
 	var hostID int
 	var currentGrade string
 	var createdAt time.Time
@@ -197,12 +203,12 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 		return &Domain{}, false, customErr
 	}
 
-	oldServers, customErr := c.getAllServers(hostID)
-	if customErr != nil {
-		return &Domain{}, false, customErr
-	}
-
 	if diff := checkTimeDiffNow(createdAt); diff >= 1 {
+
+		oldServers, customErr := c.getAllServers(hostID)
+		if customErr != nil {
+			return &Domain{}, false, customErr
+		}
 
 		newServers, customErr := AddServers(domainName)
 		if customErr != nil {
@@ -238,6 +244,8 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 			return &Domain{}, false, customErr
 		}
 
+		defer stmt.Close()
+
 		_, err = stmt.Exec(serverChanged, newGrade, currentGrade, time.Now(), hostID)
 		if err != nil {
 			errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
@@ -269,6 +277,8 @@ func (c *Connection) GetDomain(domainName string) (*Domain, *wrappedErr.Error) {
 		log.Println(customErr)
 		return &Domain{}, customErr
 	}
+
+	defer stmt.Close()
 
 	row := stmt.QueryRow(domainName)
 
@@ -329,6 +339,8 @@ func (c *Connection) getAllServers(hostID int) ([]Server, *wrappedErr.Error) {
 		return []Server{}, newErr
 	}
 
+	defer stmt.Close()
+
 	rows, err := stmt.Query(hostID)
 	if err != nil {
 		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
@@ -385,6 +397,8 @@ func (c *Connection) updateAllServers(newServers []Server, hostID int) *wrappedE
 		log.Println(customErr)
 		return customErr
 	}
+
+	defer stmt.Close()
 
 	for i := 0; i < len(newServers); i++ {
 
