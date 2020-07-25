@@ -32,7 +32,18 @@ func DomainPOST(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 
 		domain, exists, customErr := host.CheckDomainExists(string(hostArg))
 		if customErr != nil {
-			ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
+
+			switch customErr.Status {
+			case 408:
+				ctx.Response.SetStatusCode(fasthttp.StatusRequestTimeout)
+				fmt.Fprintln(ctx, customErr.Message)
+			case 500:
+				ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
+			case 501:
+				ctx.Response.SetStatusCode(fasthttp.StatusNotImplemented)
+				fmt.Fprintln(ctx, customErr.Message)
+			}
+
 			return
 		}
 

@@ -44,11 +44,13 @@ func AddServers(domain string) ([]Server, *wrappedErr.Error) {
 			return []Server{}, customErr
 		}
 
+		countryCode, organization := assignRegistryData(serverRegistry)
+
 		var server = Server{
 			Address:  IPAddress,
 			SslGrade: hostSSLData.EndPoints[i].Grade,
-			Country:  serverRegistry.WhoIsRecord.Registry.RegistrantInfo.CountryCode,
-			Owner:    serverRegistry.WhoIsRecord.Registry.RegistrantInfo.Organization,
+			Country:  countryCode,
+			Owner:    organization,
 		}
 
 		servers = append(servers, server)
@@ -78,4 +80,19 @@ func GetLowestGrade(servers []Server) string {
 
 	return lowestGrade
 
+}
+
+func assignRegistryData(server *whoisAPI.Response) (country, owner string) {
+
+	country = server.WhoIsRecord.Registry.RegistrantInfo.CountryCode
+	owner = server.WhoIsRecord.Registry.RegistrantInfo.Organization
+
+	if len(country) == 0 || len(owner) == 0 {
+
+		country = server.WhoIsRecord.SubRecord[0].RegistrantInfo.CountryCode
+		owner = server.WhoIsRecord.SubRecord[0].RegistrantInfo.Organization
+
+	}
+
+	return
 }
