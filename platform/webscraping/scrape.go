@@ -63,7 +63,7 @@ func scrapeDocument(domain string) (*goquery.Document, *wrappedErr.Error) {
 
 func (w *WebsiteInfo) fetchTitle(document *goquery.Document) {
 
-	title := document.Find("title").Text()
+	title := document.Find("title").First().Text()
 	w.Title = title
 
 }
