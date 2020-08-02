@@ -30,7 +30,7 @@ func Get(IP string) (*Response, *wrappedErr.Error) {
 
 	err = json.Unmarshal(body, &responseObject)
 	if err != nil {
-		errMessage := fmt.Sprintf("JSON enconding failed: %s", err.Error())
+		errMessage := fmt.Sprintf("JSON encoding failed: %s", err.Error())
 		customErr = wrappedErr.New(500, "Get", errMessage)
 		log.Println(customErr)
 		return &Response{}, customErr
