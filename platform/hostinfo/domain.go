@@ -47,7 +47,17 @@ func (c *Connection) InsertDomain(domain *Domain) *wrappedErr.Error {
 
 	var customErr *wrappedErr.Error
 
-	insertDomainStmt, err := c.DB.Prepare(`
+	tx, err := c.DB.Begin()
+	if err != nil {
+		errMessage := fmt.Sprintf("Failed to begin transaction: %s", err.Error())
+		customErr := wrappedErr.New(500, "InsertDomain", errMessage)
+		log.Println(customErr)
+		return customErr
+	}
+
+	defer tx.Rollback()
+
+	insertDomainStmt, err := tx.Prepare(`
 	INSERT INTO 
 		host (domain_name, server_changed, ssl_grade, previous_ssl_grade, logo, title, is_down, created_at) 
 	VALUES 
@@ -74,9 +84,15 @@ func (c *Connection) InsertDomain(domain *Domain) *wrappedErr.Error {
 	}
 
 	var lastInsertID int
-	record.Scan(&lastInsertID)
+	
+	if err := record.Scan(&lastInsertID); err != nil {
+		errMessage := fmt.Sprintf("Row scan failed: %s", err.Error())
+		customErr = wrappedErr.New(500, "InsertDomain", errMessage)
+		log.Println(customErr)
+		return customErr
+	}
 
-	insertServerStmt, err := c.DB.Prepare(`
+	insertServerStmt, err := tx.Prepare(`
 	INSERT INTO 
 		server (address, ssl_grade, country, owner, host_id) 
 	VALUES 
@@ -105,6 +121,15 @@ func (c *Connection) InsertDomain(domain *Domain) *wrappedErr.Error {
 
 	}
 
+	commitErr := tx.Commit()
+
+	if commitErr != nil {
+		errMessage := fmt.Sprintf("Unable to commit transaction: %s", err.Error())
+		customErr = wrappedErr.New(500, "InsertDomain", errMessage)
+		log.Println(customErr)
+		return customErr
+	}
+
 	return nil
 
 }
@@ -115,7 +140,17 @@ func (c *Connection) GetAllDomains() (*Items, *wrappedErr.Error) {
 	var items Items
 	var customErr *wrappedErr.Error
 
-	rows, err := c.DB.Query("SELECT * FROM host")
+	tx, err := c.DB.Begin()
+	if err != nil {
+		errMessage := fmt.Sprintf("Failed to begin transaction: %s", err.Error())
+		customErr := wrappedErr.New(500, "GetAllDomains", errMessage)
+		log.Println(customErr)
+		return &Items{}, customErr
+	}
+
+	defer tx.Rollback()
+
+	rows, err := tx.Query("SELECT * FROM host")
 	if err != nil {
 		errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
 		customErr = wrappedErr.New(500, "GetAllDomains", errMessage)
@@ -140,7 +175,7 @@ func (c *Connection) GetAllDomains() (*Items, *wrappedErr.Error) {
 			return &Items{}, customErr
 		}
 
-		servers, customErr := c.getAllServers(id)
+		servers, customErr := c.getAllServers(tx, id)
 		if customErr != nil {
 			return &Items{}, customErr
 		}
@@ -163,6 +198,15 @@ func (c *Connection) GetAllDomains() (*Items, *wrappedErr.Error) {
 
 	}
 
+	commitErr := tx.Commit()
+
+	if commitErr != nil {
+		errMessage := fmt.Sprintf("Unable to commit transaction: %s", err.Error())
+		customErr = wrappedErr.New(500, "GetAllDomains", errMessage)
+		log.Println(customErr)
+		return &Items{}, customErr
+	}
+
 	return &items, nil
 
 }
@@ -172,7 +216,17 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 
 	var customErr *wrappedErr.Error
 
-	stmt, err := c.DB.Prepare(`
+	tx, err := c.DB.Begin()
+	if err != nil {
+		errMessage := fmt.Sprintf("Failed to begin transaction: %s", err.Error())
+		customErr := wrappedErr.New(500, "CheckDomainExists", errMessage)
+		log.Println(customErr)
+		return &Domain{}, false, customErr
+	}
+
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare(`
 	SELECT
 		host.id, host.ssl_grade, host.created_at  
 	FROM 
@@ -206,7 +260,7 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 
 	if diff := checkTimeDiffNow(createdAt); diff >= 1 {
 
-		oldServers, customErr := c.getAllServers(hostID)
+		oldServers, customErr := c.getAllServers(tx, hostID)
 		if customErr != nil {
 			return &Domain{}, false, customErr
 		}
@@ -222,14 +276,14 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 
 		if serverChanged {
 
-			customErr = c.updateAllServers(newServers, hostID)
+			customErr = c.updateAllServers(tx, newServers, hostID)
 			if customErr != nil {
 				return &Domain{}, false, customErr
 			}
 
 		}
 
-		stmt, err := c.DB.Prepare(`
+		stmt, err := tx.Prepare(`
 		UPDATE host
 		SET server_changed = $1,
 				ssl_grade = $2,
@@ -257,6 +311,15 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 
 	}
 
+	commitErr := tx.Commit()
+
+	if commitErr != nil {
+		errMessage := fmt.Sprintf("Unable to commit transaction: %s", err.Error())
+		customErr = wrappedErr.New(500, "CheckDomainExists", errMessage)
+		log.Println(customErr)
+		return &Domain{}, false, customErr
+	}
+
 	domainObject, customErr := c.GetDomain(domainName)
 	if customErr != nil {
 		return &Domain{}, false, customErr
@@ -271,7 +334,17 @@ func (c *Connection) GetDomain(domainName string) (*Domain, *wrappedErr.Error) {
 
 	var customErr *wrappedErr.Error
 
-	stmt, err := c.DB.Prepare("SELECT * FROM host WHERE host.domain_name=$1")
+	tx, err := c.DB.Begin()
+	if err != nil {
+		errMessage := fmt.Sprintf("Failed to begin transaction: %s", err.Error())
+		customErr := wrappedErr.New(500, "GetDomain", errMessage)
+		log.Println(customErr)
+		return &Domain{}, customErr
+	}
+
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare("SELECT * FROM host WHERE host.domain_name=$1")
 	if err != nil {
 		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
 		customErr = wrappedErr.New(500, "GetDomain", errMessage)
@@ -296,7 +369,7 @@ func (c *Connection) GetDomain(domainName string) (*Domain, *wrappedErr.Error) {
 		return &Domain{}, customErr
 	}
 
-	servers, customErr := c.getAllServers(id)
+	servers, customErr := c.getAllServers(tx, id)
 	if customErr != nil {
 		return &Domain{}, customErr
 	}
@@ -315,17 +388,26 @@ func (c *Connection) GetDomain(domainName string) (*Domain, *wrappedErr.Error) {
 		CreatedAt: createdAt,
 	}
 
+	commitErr := tx.Commit()
+
+	if commitErr != nil {
+		errMessage := fmt.Sprintf("Unable to commit transaction: %s", err.Error())
+		customErr = wrappedErr.New(500, "GetDomain", errMessage)
+		log.Println(customErr)
+		return &Domain{}, customErr
+	}
+
 	return &domainObject, nil
 
 }
 
 // Returns from the database a slice of servers for a given host id
-func (c *Connection) getAllServers(hostID int) ([]Server, *wrappedErr.Error) {
+func (c *Connection) getAllServers(tx *sql.Tx, hostID int) ([]Server, *wrappedErr.Error) {
 
 	var servers []Server
 	var newErr *wrappedErr.Error
 
-	stmt, err := c.DB.Prepare(`
+	stmt, err := tx.Prepare(`
 	SELECT 
 		server.address, server.ssl_grade, server.country, server.owner 
 	FROM 
@@ -379,11 +461,11 @@ func (c *Connection) getAllServers(hostID int) ([]Server, *wrappedErr.Error) {
 
 }
 
-func (c *Connection) updateAllServers(newServers []Server, hostID int) *wrappedErr.Error {
+func (c *Connection) updateAllServers(tx *sql.Tx, newServers []Server, hostID int) *wrappedErr.Error {
 
 	var customErr *wrappedErr.Error
 
-	deleteServerStmt, err := c.DB.Prepare(`
+	deleteServerStmt, err := tx.Prepare(`
 	DELETE FROM server
 	WHERE host_id = $1;
 	`)
@@ -404,7 +486,7 @@ func (c *Connection) updateAllServers(newServers []Server, hostID int) *wrappedE
 		return customErr
 	}
 
-	insertServerStmt, err := c.DB.Prepare(`
+	insertServerStmt, err := tx.Prepare(`
 	INSERT INTO
 		server (address, ssl_grade, country, owner, host_id)
 	VALUES
