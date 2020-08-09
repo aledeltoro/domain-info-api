@@ -85,10 +85,13 @@ func TestInsertDomain(t *testing.T) {
 	VALUES 
 		($1, $2, $3, $4, $5)
 	`
+	hostID := 0
 
 	domainStmt := mock.ExpectPrepare(insertDomainQuery)
 	domainStmt.ExpectQuery().
-		WithArgs(testDomain.Name, testHost.ServersChanged, testHost.Grade, testHost.PreviousGrade, testHost.Logo, testHost.Title, testHost.IsDown, testDomain.CreatedAt)
+		WithArgs(testDomain.Name, testHost.ServersChanged, testHost.Grade, testHost.PreviousGrade, testHost.Logo, testHost.Title, testHost.IsDown, testDomain.CreatedAt).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).
+		AddRow(hostID))
 
 	serverStmt := mock.ExpectPrepare(insertServerQuery)
 
@@ -97,7 +100,7 @@ func TestInsertDomain(t *testing.T) {
 		server := testHost.Servers[i]
 
 		_ = serverStmt.ExpectExec().
-			WithArgs(server.Address, server.SslGrade, server.Country, server.Owner, 0).
+			WithArgs(server.Address, server.SslGrade, server.Country, server.Owner, hostID).
 			WillReturnResult(sqlmock.NewResult(0, 1))
 
 	}

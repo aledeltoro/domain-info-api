@@ -74,7 +74,13 @@ func (c *Connection) InsertDomain(domain *Domain) *wrappedErr.Error {
 	}
 
 	var lastInsertID int
-	record.Scan(&lastInsertID)
+
+	if err := record.Scan(&lastInsertID); err != nil {
+		errMessage := fmt.Sprintf("Row scan failed: %s", err.Error())
+		customErr = wrappedErr.New(500, "InsertDomain", errMessage)
+		log.Println(customErr)
+		return customErr
+	}
 
 	insertServerStmt, err := c.DB.Prepare(`
 	INSERT INTO 

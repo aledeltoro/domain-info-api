@@ -87,7 +87,7 @@ func assignRegistryData(server *whoisAPI.Response) (country, owner string) {
 	country = server.WhoIsRecord.Registry.RegistrantInfo.CountryCode
 	owner = server.WhoIsRecord.Registry.RegistrantInfo.Organization
 
-	if len(country) == 0 || len(owner) == 0 {
+	if len(country) == 0 && len(owner) == 0 {
 
 		country = server.WhoIsRecord.SubRecord[0].RegistrantInfo.CountryCode
 		owner = server.WhoIsRecord.SubRecord[0].RegistrantInfo.Organization
