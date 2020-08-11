@@ -23,12 +23,12 @@ var statusMessages = map[string]bool{
 	"READY": false,
 }
 
-// NewHost return a Host struct with about the given URL
-func NewHost(URL string) (*Host, *wrappedErr.Error) {
+// newHost return a Host struct with about the given URL
+func newHost(URL string) (*Host, *wrappedErr.Error) {
 
 	var host Host
 
-	servers, customErr := AddServers(URL)
+	servers, customErr := addServers(URL)
 	if customErr != nil {
 		return &Host{}, customErr
 	}
@@ -48,7 +48,7 @@ func NewHost(URL string) (*Host, *wrappedErr.Error) {
 	host = Host{
 		Servers:        servers,
 		ServersChanged: false,
-		Grade:          GetLowestGrade(servers),
+		Grade:          getLowestGrade(servers),
 		PreviousGrade:  "",
 		Logo:           siteInfo.Logo,
 		Title:          strings.TrimSpace(siteInfo.Title),

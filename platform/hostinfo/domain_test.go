@@ -204,7 +204,7 @@ func TestGetDomain(t *testing.T) {
 
 	mockConnection.DB = db
 
-	_, customErr := mockConnection.GetDomain("test.com")
+	_, customErr := mockConnection.getDomain("test.com")
 	if customErr != nil {
 		t.Errorf("didn't expect an error: %s", customErr)
 	}

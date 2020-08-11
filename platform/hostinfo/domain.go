@@ -27,7 +27,7 @@ func NewDomain(URL string) (*Domain, *wrappedErr.Error) {
 	var domainObject Domain
 	var hostObject *Host
 
-	hostObject, customErr := NewHost(URL)
+	hostObject, customErr := newHost(URL)
 	if customErr != nil {
 		return &Domain{}, customErr
 	}
@@ -217,12 +217,12 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 			return &Domain{}, false, customErr
 		}
 
-		newServers, customErr := AddServers(domainName)
+		newServers, customErr := addServers(domainName)
 		if customErr != nil {
 			return &Domain{}, false, customErr
 		}
 
-		newGrade := GetLowestGrade(newServers)
+		newGrade := getLowestGrade(newServers)
 
 		serverChanged := haveServersChanged(newServers, oldServers)
 
@@ -263,7 +263,7 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 
 	}
 
-	domainObject, customErr := c.GetDomain(domainName)
+	domainObject, customErr := c.getDomain(domainName)
 	if customErr != nil {
 		return &Domain{}, false, customErr
 	}
@@ -272,15 +272,15 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 
 }
 
-// GetDomain returns a single domain specified by the domain name
-func (c *Connection) GetDomain(domainName string) (*Domain, *wrappedErr.Error) {
+// getDomain returns a single domain specified by the domain name
+func (c *Connection) getDomain(domainName string) (*Domain, *wrappedErr.Error) {
 
 	var customErr *wrappedErr.Error
 
 	stmt, err := c.DB.Prepare("SELECT * FROM host WHERE host.domain_name=$1")
 	if err != nil {
 		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
-		customErr = wrappedErr.New(500, "GetDomain", errMessage)
+		customErr = wrappedErr.New(500, "getDomain", errMessage)
 		log.Println(customErr)
 		return &Domain{}, customErr
 	}
@@ -297,7 +297,7 @@ func (c *Connection) GetDomain(domainName string) (*Domain, *wrappedErr.Error) {
 	err = row.Scan(&id, &domainName, &serversChanged, &grade, &previousGrade, &logo, &title, &isDown, &createdAt)
 	if err != nil {
 		errMessage := fmt.Sprintf("Row scan failed: %s", err.Error())
-		customErr = wrappedErr.New(500, "GetDomain", errMessage)
+		customErr = wrappedErr.New(500, "getDomain", errMessage)
 		log.Println(customErr)
 		return &Domain{}, customErr
 	}

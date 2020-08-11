@@ -64,7 +64,7 @@ func TestGetLowestGrade(t *testing.T) {
 	for _, test := range tests {
 		message := fmt.Sprintf("expected SSL grade: %s", test.want)
 		t.Run(message, func(t *testing.T) {
-			got := GetLowestGrade(test.servers)
+			got := getLowestGrade(test.servers)
 			assertLowestGrade(t, got, test.want)
 		})
 	}

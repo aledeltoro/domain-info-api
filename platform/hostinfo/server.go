@@ -24,8 +24,8 @@ var grades = map[string]int{
 	"F":  1,
 }
 
-// AddServers returns a slice with all of the servers of a given domain
-func AddServers(domain string) ([]Server, *wrappedErr.Error) {
+// addServers returns a slice with all of the servers of a given domain
+func addServers(domain string) ([]Server, *wrappedErr.Error) {
 
 	var servers []Server
 
@@ -61,8 +61,8 @@ func AddServers(domain string) ([]Server, *wrappedErr.Error) {
 
 }
 
-// GetLowestGrade returns the lowest grade string from the array of servers
-func GetLowestGrade(servers []Server) string {
+// getLowestGrade returns the lowest grade string from the array of servers
+func getLowestGrade(servers []Server) string {
 
 	var lowestGrade, currentLetter string
 
