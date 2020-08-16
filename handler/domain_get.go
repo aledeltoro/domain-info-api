@@ -31,7 +31,7 @@ func DomainGET(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 		err := json.NewEncoder(ctx).Encode(domains)
 		if err != nil {
 			errMessage := fmt.Sprintf("JSON encoding failed: %s", err.Error())
-			customErr := wrappedErr.New(500, "DomainGET", errMessage)
+			customErr := wrappedErr.New(fasthttp.StatusInternalServerError, "DomainGET", errMessage)
 			log.Println(customErr)
 			ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
 			return

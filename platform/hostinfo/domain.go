@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	wrappedErr "domain-info-api/platform/errorhandling"
@@ -56,7 +57,7 @@ func (c *Connection) InsertDomain(domain *Domain) *wrappedErr.Error {
 	`)
 	if err != nil {
 		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
-		customErr = wrappedErr.New(500, "InsertDomain", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "InsertDomain", errMessage)
 		log.Println(customErr)
 		return customErr
 	}
@@ -68,7 +69,7 @@ func (c *Connection) InsertDomain(domain *Domain) *wrappedErr.Error {
 	record := insertDomainStmt.QueryRow(domain.Name, host.ServersChanged, host.Grade, host.PreviousGrade, host.Logo, host.Title, host.IsDown, domain.CreatedAt)
 	if err != nil {
 		errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
-		customErr = wrappedErr.New(500, "InsertDomain", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "InsertDomain", errMessage)
 		log.Println(customErr)
 		return customErr
 	}
@@ -77,7 +78,7 @@ func (c *Connection) InsertDomain(domain *Domain) *wrappedErr.Error {
 
 	if err := record.Scan(&lastInsertID); err != nil {
 		errMessage := fmt.Sprintf("Row scan failed: %s", err.Error())
-		customErr = wrappedErr.New(500, "InsertDomain", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "InsertDomain", errMessage)
 		log.Println(customErr)
 		return customErr
 	}
@@ -90,7 +91,7 @@ func (c *Connection) InsertDomain(domain *Domain) *wrappedErr.Error {
 	`)
 	if err != nil {
 		errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
-		customErr = wrappedErr.New(500, "InsertDomain", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "InsertDomain", errMessage)
 		log.Println(customErr)
 		return customErr
 	}
@@ -104,7 +105,7 @@ func (c *Connection) InsertDomain(domain *Domain) *wrappedErr.Error {
 		_, err := insertServerStmt.Exec(server.Address, server.SslGrade, server.Country, server.Owner, lastInsertID)
 		if err != nil {
 			errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
-			customErr = wrappedErr.New(500, "InsertDomain", errMessage)
+			customErr = wrappedErr.New(http.StatusInternalServerError, "InsertDomain", errMessage)
 			log.Println(customErr)
 			return customErr
 		}
@@ -124,7 +125,7 @@ func (c *Connection) GetAllDomains() (*Items, *wrappedErr.Error) {
 	rows, err := c.DB.Query("SELECT * FROM host")
 	if err != nil {
 		errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
-		customErr = wrappedErr.New(500, "GetAllDomains", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "GetAllDomains", errMessage)
 		log.Println(customErr)
 		return &Items{}, customErr
 	}
@@ -141,7 +142,7 @@ func (c *Connection) GetAllDomains() (*Items, *wrappedErr.Error) {
 		var err = rows.Scan(&id, &name, &serverChanged, &grade, &previousGrade, &logo, &title, &isDown, &createdAt)
 		if err != nil {
 			errMessage := fmt.Sprintf("Row scan failed: %s", err.Error())
-			customErr = wrappedErr.New(500, "GetAllDomains", errMessage)
+			customErr = wrappedErr.New(http.StatusInternalServerError, "GetAllDomains", errMessage)
 			log.Println(customErr)
 			return &Items{}, customErr
 		}
@@ -188,7 +189,7 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 	`)
 	if err != nil {
 		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
-		customErr = wrappedErr.New(500, "CheckDomainExists", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "CheckDomainExists", errMessage)
 		log.Println(customErr)
 		return &Domain{}, false, customErr
 	}
@@ -205,7 +206,7 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 			return &Domain{}, false, nil
 		}
 		errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
-		customErr = wrappedErr.New(500, "CheckDomainExists", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "CheckDomainExists", errMessage)
 		log.Println(customErr)
 		return &Domain{}, false, customErr
 	}
@@ -246,7 +247,7 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 		`)
 		if err != nil {
 			errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
-			customErr = wrappedErr.New(500, "CheckDomainExists", errMessage)
+			customErr = wrappedErr.New(http.StatusInternalServerError, "CheckDomainExists", errMessage)
 			log.Println(customErr)
 			return &Domain{}, false, customErr
 		}
@@ -256,7 +257,7 @@ func (c *Connection) CheckDomainExists(domainName string) (*Domain, bool, *wrapp
 		_, err = stmt.Exec(serverChanged, newGrade, currentGrade, time.Now(), hostID)
 		if err != nil {
 			errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
-			customErr = wrappedErr.New(500, "CheckDomainExists", errMessage)
+			customErr = wrappedErr.New(http.StatusInternalServerError, "CheckDomainExists", errMessage)
 			log.Println(customErr)
 			return &Domain{}, false, customErr
 		}
@@ -280,7 +281,7 @@ func (c *Connection) getDomain(domainName string) (*Domain, *wrappedErr.Error) {
 	stmt, err := c.DB.Prepare("SELECT * FROM host WHERE host.domain_name=$1")
 	if err != nil {
 		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
-		customErr = wrappedErr.New(500, "getDomain", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "getDomain", errMessage)
 		log.Println(customErr)
 		return &Domain{}, customErr
 	}
@@ -297,7 +298,7 @@ func (c *Connection) getDomain(domainName string) (*Domain, *wrappedErr.Error) {
 	err = row.Scan(&id, &domainName, &serversChanged, &grade, &previousGrade, &logo, &title, &isDown, &createdAt)
 	if err != nil {
 		errMessage := fmt.Sprintf("Row scan failed: %s", err.Error())
-		customErr = wrappedErr.New(500, "getDomain", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "getDomain", errMessage)
 		log.Println(customErr)
 		return &Domain{}, customErr
 	}
@@ -341,7 +342,7 @@ func (c *Connection) getAllServers(hostID int) ([]Server, *wrappedErr.Error) {
 	`)
 	if err != nil {
 		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
-		newErr = wrappedErr.New(500, "getAllServers", errMessage)
+		newErr = wrappedErr.New(http.StatusInternalServerError, "getAllServers", errMessage)
 		log.Println(newErr)
 		return []Server{}, newErr
 	}
@@ -351,7 +352,7 @@ func (c *Connection) getAllServers(hostID int) ([]Server, *wrappedErr.Error) {
 	rows, err := stmt.Query(hostID)
 	if err != nil {
 		errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
-		newErr = wrappedErr.New(500, "getAllServers", errMessage)
+		newErr = wrappedErr.New(http.StatusInternalServerError, "getAllServers", errMessage)
 		log.Println(newErr)
 		return []Server{}, newErr
 	}
@@ -365,7 +366,7 @@ func (c *Connection) getAllServers(hostID int) ([]Server, *wrappedErr.Error) {
 		err := rows.Scan(&address, &grade, &country, &owner)
 		if err != nil {
 			errMessage := fmt.Sprintf("Row scan failed: %s", err.Error())
-			newErr = wrappedErr.New(500, "getAllServers", errMessage)
+			newErr = wrappedErr.New(http.StatusInternalServerError, "getAllServers", errMessage)
 			log.Println(newErr)
 			return []Server{}, newErr
 		}
@@ -395,7 +396,7 @@ func (c *Connection) updateAllServers(newServers []Server, hostID int) *wrappedE
 	`)
 	if err != nil {
 		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
-		customErr = wrappedErr.New(500, "updateAllServers", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "updateAllServers", errMessage)
 		log.Println(customErr)
 		return customErr
 	}
@@ -405,7 +406,7 @@ func (c *Connection) updateAllServers(newServers []Server, hostID int) *wrappedE
 	_, err = deleteServerStmt.Exec(hostID)
 	if err != nil {
 		errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
-		customErr = wrappedErr.New(500, "updateAllServers", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "updateAllServers", errMessage)
 		log.Println(customErr)
 		return customErr
 	}
@@ -418,7 +419,7 @@ func (c *Connection) updateAllServers(newServers []Server, hostID int) *wrappedE
 	`)
 	if err != nil {
 		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
-		customErr = wrappedErr.New(500, "updateAllServers", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "updateAllServers", errMessage)
 		log.Println(customErr)
 		return customErr
 	}
@@ -432,7 +433,7 @@ func (c *Connection) updateAllServers(newServers []Server, hostID int) *wrappedE
 		_, err := insertServerStmt.Exec(server.Address, server.SslGrade, server.Country, server.Owner, hostID)
 		if err != nil {
 			errMessage := fmt.Sprintf("Query operation failed: %s", err.Error())
-			customErr = wrappedErr.New(500, "updateAllServers", errMessage)
+			customErr = wrappedErr.New(http.StatusInternalServerError, "updateAllServers", errMessage)
 			log.Println(customErr)
 			return customErr
 		}

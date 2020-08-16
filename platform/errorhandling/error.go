@@ -14,13 +14,13 @@ type Error struct {
 
 // New returns a new instance of Error struct
 func New(status int, methodName, message string) *Error {
-	
+
 	return &Error{
 		Status:  status,
 		Context: methodName,
 		Message: errors.New(message),
 	}
-	
+
 }
 
 func (e *Error) String() string {

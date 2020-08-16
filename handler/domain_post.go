@@ -23,7 +23,7 @@ func DomainPOST(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 		ctx.Response.Header.SetBytesV("Access-Control-Allow-Origin", ctx.Request.Header.Peek("Origin"))
 
 		if !validator.IsURL(string(hostArg)) {
-			customErr := wrappedErr.New(400, "DomainPOST", "Invalid domain name")
+			customErr := wrappedErr.New(fasthttp.StatusBadRequest, "DomainPOST", "Invalid domain name")
 			log.Println(customErr)
 			ctx.Response.SetStatusCode(fasthttp.StatusBadRequest)
 			fmt.Fprintln(ctx, customErr.Message.Error())
@@ -34,12 +34,12 @@ func DomainPOST(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 		if customErr != nil {
 
 			switch customErr.Status {
-			case 408:
+			case fasthttp.StatusRequestTimeout:
 				ctx.Response.SetStatusCode(fasthttp.StatusRequestTimeout)
 				fmt.Fprintln(ctx, customErr.Message)
-			case 500:
+			case fasthttp.StatusInternalServerError:
 				ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
-			case 501:
+			case fasthttp.StatusNotImplemented:
 				ctx.Response.SetStatusCode(fasthttp.StatusNotImplemented)
 				fmt.Fprintln(ctx, customErr.Message)
 			}
@@ -52,12 +52,12 @@ func DomainPOST(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 			if customErr != nil {
 
 				switch customErr.Status {
-				case 408:
+				case fasthttp.StatusRequestTimeout:
 					ctx.Response.SetStatusCode(fasthttp.StatusRequestTimeout)
 					fmt.Fprintln(ctx, customErr.Message)
-				case 500:
+				case fasthttp.StatusInternalServerError:
 					ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
-				case 501:
+				case fasthttp.StatusNotImplemented:
 					ctx.Response.SetStatusCode(fasthttp.StatusNotImplemented)
 					fmt.Fprintln(ctx, customErr.Message)
 				}
@@ -78,7 +78,7 @@ func DomainPOST(host *hostinfo.Connection) func(ctx *fasthttp.RequestCtx) {
 		err := json.NewEncoder(ctx).Encode(domain.HostInfo)
 		if err != nil {
 			errMessage := fmt.Sprintf("JSON encoding failed: %s", err.Error())
-			customErr := wrappedErr.New(500, "DomainPOST", errMessage)
+			customErr := wrappedErr.New(fasthttp.StatusInternalServerError, "DomainPOST", errMessage)
 			log.Println(customErr)
 			ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
 			return

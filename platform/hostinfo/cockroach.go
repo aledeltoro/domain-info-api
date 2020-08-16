@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/http"
 
 	wrappedErr "domain-info-api/platform/errorhandling"
 )
@@ -44,7 +45,7 @@ func NewConnection(db *sql.DB) (*Connection, *wrappedErr.Error) {
 	stmt, err := db.Prepare(hostTableQuery)
 	if err != nil {
 		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
-		customErr = wrappedErr.New(500, "NewConnection", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "NewConnection", errMessage)
 		log.Println(customErr)
 		return &Connection{}, customErr
 	}
@@ -54,7 +55,7 @@ func NewConnection(db *sql.DB) (*Connection, *wrappedErr.Error) {
 	_, err = stmt.Exec()
 	if err != nil {
 		errMessage := fmt.Sprintf("Failed creation 'host' table: %s", err.Error())
-		customErr = wrappedErr.New(500, "NewConnection", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "NewConnection", errMessage)
 		log.Println(customErr)
 		return &Connection{}, customErr
 	}
@@ -62,7 +63,7 @@ func NewConnection(db *sql.DB) (*Connection, *wrappedErr.Error) {
 	stmt, err = db.Prepare(serverTableQuery)
 	if err != nil {
 		errMessage := fmt.Sprintf("Invalid query statement: %s", err.Error())
-		customErr = wrappedErr.New(500, "NewConnection", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "NewConnection", errMessage)
 		log.Println(customErr)
 		return &Connection{}, customErr
 	}
@@ -72,7 +73,7 @@ func NewConnection(db *sql.DB) (*Connection, *wrappedErr.Error) {
 	_, err = stmt.Exec()
 	if err != nil {
 		errMessage := fmt.Sprintf("Failed creation 'server' table: %s", err.Error())
-		customErr = wrappedErr.New(500, "NewConnection", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "NewConnection", errMessage)
 		log.Println(customErr)
 		return &Connection{}, customErr
 	}

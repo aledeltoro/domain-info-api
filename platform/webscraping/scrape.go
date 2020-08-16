@@ -42,7 +42,7 @@ func scrapeDocument(domain string) (*goquery.Document, *wrappedErr.Error) {
 	response, err := http.Get(protocol + domain)
 	if err != nil {
 		errMessage := fmt.Sprintf("Error: %s", err.Error())
-		customErr = wrappedErr.New(500, "scrapeDocument", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "scrapeDocument", errMessage)
 		log.Println(customErr)
 		return &goquery.Document{}, customErr
 	}
@@ -52,7 +52,7 @@ func scrapeDocument(domain string) (*goquery.Document, *wrappedErr.Error) {
 	document, err := goquery.NewDocumentFromReader(response.Body)
 	if err != nil {
 		errMessage := fmt.Sprintf("Error: %s", err.Error())
-		customErr = wrappedErr.New(500, "scrapeDocument", errMessage)
+		customErr = wrappedErr.New(http.StatusInternalServerError, "scrapeDocument", errMessage)
 		log.Println(customErr)
 		return &goquery.Document{}, customErr
 	}

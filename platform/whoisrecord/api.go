@@ -21,7 +21,7 @@ func Get(IP string) (*Response, *wrappedErr.Error) {
 	_, body, err := fasthttp.Get(nil, whoIsAPI+IP)
 	if err != nil {
 		errMessage := fmt.Sprintf("WhoisXML API consumption failed: %s", err.Error())
-		customErr = wrappedErr.New(500, "Get", errMessage)
+		customErr = wrappedErr.New(fasthttp.StatusInternalServerError, "Get", errMessage)
 		log.Println(customErr)
 		return &Response{}, customErr
 	}
@@ -31,7 +31,7 @@ func Get(IP string) (*Response, *wrappedErr.Error) {
 	err = json.Unmarshal(body, &responseObject)
 	if err != nil {
 		errMessage := fmt.Sprintf("JSON encoding failed: %s", err.Error())
-		customErr = wrappedErr.New(500, "Get", errMessage)
+		customErr = wrappedErr.New(fasthttp.StatusInternalServerError, "Get", errMessage)
 		log.Println(customErr)
 		return &Response{}, customErr
 	}

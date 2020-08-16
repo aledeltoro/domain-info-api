@@ -23,13 +23,14 @@ func Get(domain string) (*Response, *wrappedErr.Error) {
 	var customErr *wrappedErr.Error
 
 	startTime := time.Now()
+	timeLimit := float64(2)
 
 	for pendingResponse {
 
 		_, body, err := fasthttp.Get(nil, sslAPI+hostQuery+domain)
 		if err != nil {
 			errMessage := fmt.Sprintf("SSL API consumption failed: %s", err.Error())
-			customErr = wrappedErr.New(500, "Get", errMessage)
+			customErr = wrappedErr.New(fasthttp.StatusInternalServerError, "Get", errMessage)
 			log.Println(customErr)
 			return &Response{}, customErr
 		}
@@ -37,7 +38,7 @@ func Get(domain string) (*Response, *wrappedErr.Error) {
 		err = json.Unmarshal(body, &responseObject)
 		if err != nil {
 			errMessage := fmt.Sprintf("JSON encoding failed: %s", err.Error())
-			customErr = wrappedErr.New(500, "Get", errMessage)
+			customErr = wrappedErr.New(fasthttp.StatusInternalServerError, "Get", errMessage)
 			log.Println(customErr)
 			return &Response{}, customErr
 		}
@@ -48,9 +49,9 @@ func Get(domain string) (*Response, *wrappedErr.Error) {
 
 		timeout := time.Now().Sub(startTime).Minutes()
 
-		if timeout >= float64(2) {
+		if timeout >= timeLimit {
 			errMessage := fmt.Sprint("Domain could not be resolved in time. Try again later")
-			customErr = wrappedErr.New(408, "Get", errMessage)
+			customErr = wrappedErr.New(fasthttp.StatusRequestTimeout, "Get", errMessage)
 			log.Println(customErr)
 			return &Response{}, customErr
 		}
@@ -61,7 +62,7 @@ func Get(domain string) (*Response, *wrappedErr.Error) {
 			pendingResponse = false
 		} else {
 			errMessage := fmt.Sprintf("Unknown status found on SSL Labs API response. Try again later")
-			customErr = wrappedErr.New(501, "Get", errMessage)
+			customErr = wrappedErr.New(fasthttp.StatusNotImplemented, "Get", errMessage)
 			log.Println(customErr)
 			return &Response{}, customErr
 		}
