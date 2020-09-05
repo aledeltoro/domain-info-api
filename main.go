@@ -38,9 +38,10 @@ func main() {
 	}
 
 	router := fasthttprouter.New()
+	app := handler.APP{host}
 
-	router.POST("/domains", handler.DomainPOST(host))
-	router.GET("/domains", handler.DomainGET(host))
+	router.POST("/domains", app.DomainPOST)
+	router.GET("/domains", app.DomainGET)
 
 	fmt.Println("Listening on port 3000")
 

@@ -9,7 +9,7 @@ import (
 type Error struct {
 	Status  int
 	Context string
-	Message error `json:"error"`
+	Message error
 }
 
 // New returns a new instance of Error struct

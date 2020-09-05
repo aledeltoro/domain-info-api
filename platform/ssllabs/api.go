@@ -23,7 +23,7 @@ func Get(domain string) (*Response, *wrappedErr.Error) {
 	var customErr *wrappedErr.Error
 
 	startTime := time.Now()
-	timeLimit := float64(2)
+	var timeLimit float64 = 2
 
 	for pendingResponse {
 
